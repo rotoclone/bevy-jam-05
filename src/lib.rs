@@ -8,6 +8,7 @@ use bevy::{
     asset::AssetMetaCheck,
     audio::{AudioPlugin, Volume},
     prelude::*,
+    window::WindowResolution,
 };
 
 pub struct AppPlugin;
@@ -35,10 +36,11 @@ impl Plugin for AppPlugin {
                 })
                 .set(WindowPlugin {
                     primary_window: Window {
-                        title: "Bevy Jam 05".to_string(),
+                        title: "LoopRunner".to_string(),
                         canvas: Some("#bevy".to_string()),
                         fit_canvas_to_parent: true,
                         prevent_default_event_handling: true,
+                        resolution: WindowResolution::new(1280.0, 720.0),
                         ..default()
                     }
                     .into(),
