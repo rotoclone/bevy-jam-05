@@ -22,9 +22,9 @@ env:
   PACKAGE_NAME: bevy-jam-05
   # The itch.io page to upload to, in the format: `user-name/project-name`.
   # Comment this out to disable.
-  ITCH_TARGET: the_nacho/bevy-jam-05
+  ITCH_TARGET: the-nacho/bevy-jam-05
   # The organization or author that owns the rights to the game.
-  OWNER: the_nacho
+  OWNER: the-nacho
   # The path to the assets directory.
   ASSETS_DIR: assets
   # Whether packages produced by this workflow should be uploaded to the Github release.
