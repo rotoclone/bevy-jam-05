@@ -13,6 +13,9 @@ pub(super) fn plugin(app: &mut App) {
 
     app.register_type::<HandleMap<SoundtrackKey>>();
     app.init_resource::<HandleMap<SoundtrackKey>>();
+
+    app.register_type::<HandleMap<FontKey>>();
+    app.init_resource::<HandleMap<FontKey>>();
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Reflect)]
@@ -102,6 +105,33 @@ impl FromWorld for HandleMap<SoundtrackKey> {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Reflect)]
+pub enum FontKey {
+    Title,
+    General,
+}
+
+impl AssetKey for FontKey {
+    type Asset = Font;
+}
+
+impl FromWorld for HandleMap<FontKey> {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+        [
+            (
+                FontKey::Title,
+                asset_server.load("fonts/JosefinSans-Bold.ttf"),
+            ),
+            (
+                FontKey::General,
+                asset_server.load("fonts/Dosis-Regular.ttf"),
+            ),
+        ]
+        .into()
+    }
+}
+
 pub trait AssetKey: Sized {
     type Asset: Asset;
 }
@@ -119,9 +149,14 @@ where
     }
 }
 
-impl<K: AssetKey> HandleMap<K> {
+impl<K: AssetKey + Eq + std::hash::Hash> HandleMap<K> {
     pub fn all_loaded(&self, asset_server: &AssetServer) -> bool {
         self.values()
             .all(|x| asset_server.is_loaded_with_dependencies(x))
+    }
+
+    /// Gets a handle to the asset with the provided key
+    pub fn get(&self, key: K) -> Handle<K::Asset> {
+        self[&key].clone_weak()
     }
 }

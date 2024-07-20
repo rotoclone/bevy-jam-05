@@ -4,20 +4,38 @@ use bevy::{ecs::system::EntityCommands, prelude::*, ui::Val::*};
 
 use super::{interaction::InteractionPalette, palette::*};
 
+use crate::game::assets::{FontKey, HandleMap};
+
 /// An extension trait for spawning UI widgets.
 pub trait Widgets {
     /// Spawn a simple button with text.
-    fn button(&mut self, text: impl Into<String>) -> EntityCommands;
+    fn button(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands;
 
     /// Spawn a simple header label. Bigger than [`Widgets::label`].
-    fn header(&mut self, text: impl Into<String>) -> EntityCommands;
+    fn header(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands;
 
     /// Spawn a simple text label.
-    fn label(&mut self, text: impl Into<String>) -> EntityCommands;
+    fn label(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands;
 }
 
 impl<T: Spawn> Widgets for T {
-    fn button(&mut self, text: impl Into<String>) -> EntityCommands {
+    fn button(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands {
         let mut entity = self.spawn((
             Name::new("Button"),
             ButtonBundle {
@@ -29,6 +47,7 @@ impl<T: Spawn> Widgets for T {
                     ..default()
                 },
                 background_color: BackgroundColor(NODE_BACKGROUND),
+                border_radius: BorderRadius::all(Val::Px(5.0)),
                 ..default()
             },
             InteractionPalette {
@@ -43,9 +62,9 @@ impl<T: Spawn> Widgets for T {
                 TextBundle::from_section(
                     text,
                     TextStyle {
+                        font: font_handles.get(FontKey::General),
                         font_size: 40.0,
                         color: BUTTON_TEXT,
-                        ..default()
                     },
                 ),
             ));
@@ -53,7 +72,11 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 
-    fn header(&mut self, text: impl Into<String>) -> EntityCommands {
+    fn header(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands {
         let mut entity = self.spawn((
             Name::new("Header"),
             NodeBundle {
@@ -74,9 +97,9 @@ impl<T: Spawn> Widgets for T {
                 TextBundle::from_section(
                     text,
                     TextStyle {
+                        font: font_handles.get(FontKey::General),
                         font_size: 40.0,
                         color: HEADER_TEXT,
-                        ..default()
                     },
                 ),
             ));
@@ -84,7 +107,11 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 
-    fn label(&mut self, text: impl Into<String>) -> EntityCommands {
+    fn label(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands {
         let mut entity = self.spawn((
             Name::new("Label"),
             NodeBundle {
@@ -103,9 +130,9 @@ impl<T: Spawn> Widgets for T {
                 TextBundle::from_section(
                     text,
                     TextStyle {
+                        font: font_handles.get(FontKey::General),
                         font_size: 24.0,
                         color: LABEL_TEXT,
-                        ..default()
                     },
                 ),
             ));

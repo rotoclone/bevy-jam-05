@@ -1,9 +1,13 @@
 //! The title screen that appears when the game starts.
 
 use bevy::prelude::*;
+use ui_palette::TITLE_TEXT;
 
 use super::Screen;
-use crate::ui::prelude::*;
+use crate::{
+    game::assets::{FontKey, HandleMap},
+    ui::prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Title), enter_title);
@@ -22,16 +26,48 @@ enum TitleAction {
     Exit,
 }
 
-fn enter_title(mut commands: Commands) {
+fn enter_title(mut commands: Commands, font_handles: Res<HandleMap<FontKey>>) {
     commands
         .ui_root()
         .insert(StateScoped(Screen::Title))
         .with_children(|children| {
-            children.button("Play").insert(TitleAction::Play);
-            children.button("Credits").insert(TitleAction::Credits);
+            children
+                .spawn((
+                    Name::new("Title text parent"),
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Px(500.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                ))
+                .with_children(|children| {
+                    children.spawn((
+                        Name::new("Title Text"),
+                        TextBundle::from_section(
+                            "LoopRunner",
+                            TextStyle {
+                                font: font_handles.get(FontKey::Title),
+                                font_size: 72.0,
+                                color: TITLE_TEXT,
+                            },
+                        ),
+                    ));
+                });
+            children
+                .button("Play", &font_handles)
+                .insert(TitleAction::Play);
+            children
+                .button("Credits", &font_handles)
+                .insert(TitleAction::Credits);
 
             #[cfg(not(target_family = "wasm"))]
-            children.button("Exit").insert(TitleAction::Exit);
+            children
+                .button("Exit", &font_handles)
+                .insert(TitleAction::Exit);
         });
 }
 
