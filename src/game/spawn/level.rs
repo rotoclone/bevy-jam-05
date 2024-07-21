@@ -15,4 +15,6 @@ fn spawn_level(_trigger: Trigger<SpawnLevel>, mut commands: Commands) {
     // The only thing we have in our level is a player,
     // but add things like walls etc. here.
     commands.trigger(SpawnPlayer);
+
+    commands.insert_resource(ClearColor(Color::srgb(0.35, 0.35, 0.35)));
 }
