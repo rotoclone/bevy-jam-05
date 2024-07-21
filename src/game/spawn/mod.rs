@@ -6,7 +6,8 @@ use bevy::prelude::*;
 
 pub mod level;
 pub mod player;
+pub mod sequencer;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((level::plugin, player::plugin));
+    app.add_plugins((level::plugin, player::plugin, sequencer::plugin));
 }

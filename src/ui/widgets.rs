@@ -15,6 +15,13 @@ pub trait Widgets {
         font_handles: &HandleMap<FontKey>,
     ) -> EntityCommands;
 
+    /// Spawn a small button with text.
+    fn small_button(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands;
+
     /// Spawn a simple header label. Bigger than [`Widgets::label`].
     fn header(
         &mut self,
@@ -72,6 +79,47 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 
+    fn small_button(
+        &mut self,
+        text: impl Into<String>,
+        font_handles: &HandleMap<FontKey>,
+    ) -> EntityCommands {
+        let mut entity = self.spawn((
+            Name::new("Button"),
+            ButtonBundle {
+                style: Style {
+                    width: Px(35.0),
+                    height: Px(35.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                background_color: BackgroundColor(NODE_BACKGROUND),
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            InteractionPalette {
+                none: NODE_BACKGROUND,
+                hovered: BUTTON_HOVERED_BACKGROUND,
+                pressed: BUTTON_PRESSED_BACKGROUND,
+            },
+        ));
+        entity.with_children(|children| {
+            children.spawn((
+                Name::new("Button Text"),
+                TextBundle::from_section(
+                    text,
+                    TextStyle {
+                        font: font_handles.get(FontKey::General),
+                        font_size: 30.0,
+                        color: BUTTON_TEXT,
+                    },
+                ),
+            ));
+        });
+        entity
+    }
+
     fn header(
         &mut self,
         text: impl Into<String>,
@@ -116,7 +164,7 @@ impl<T: Spawn> Widgets for T {
             Name::new("Label"),
             NodeBundle {
                 style: Style {
-                    width: Px(500.0),
+                    width: Px(100.0),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()

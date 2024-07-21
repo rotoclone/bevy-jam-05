@@ -42,7 +42,7 @@ fn spawn_player(
         Player,
         SpriteBundle {
             texture: image_handles.get(ImageKey::Player),
-            transform: Transform::from_scale(Vec2::splat(5.0).extend(1.0)),
+            transform: Transform::from_scale(Vec2::splat(3.0).extend(1.0)),
             ..Default::default()
         },
         TextureAtlas {
@@ -50,7 +50,7 @@ fn spawn_player(
             index: player_animation.get_atlas_index(),
         },
         MovementController::default(),
-        Movement { speed: 250.0 },
+        Movement { speed: 200.0 },
         WrapWithinWindow,
         player_animation,
         StateScoped(Screen::Playing),
