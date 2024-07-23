@@ -4,6 +4,8 @@ use bevy::{
     utils::HashMap,
 };
 
+use super::spawn::sequencer::NUM_SYNTH_NOTES;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<HandleMap<ImageKey>>();
     app.init_resource::<HandleMap<ImageKey>>();
@@ -47,10 +49,10 @@ impl FromWorld for HandleMap<ImageKey> {
 pub enum SfxKey {
     ButtonHover,
     ButtonPress,
-    Step1,
-    Step2,
-    Step3,
-    Step4,
+    Kick,
+    Snare,
+    HiHat,
+    Synth(usize),
 }
 
 impl AssetKey for SfxKey {
@@ -60,7 +62,7 @@ impl AssetKey for SfxKey {
 impl FromWorld for HandleMap<SfxKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
-        [
+        let mut map: HandleMap<SfxKey> = [
             (
                 SfxKey::ButtonHover,
                 asset_server.load("audio/sfx/button_hover.ogg"),
@@ -69,12 +71,21 @@ impl FromWorld for HandleMap<SfxKey> {
                 SfxKey::ButtonPress,
                 asset_server.load("audio/sfx/button_press.ogg"),
             ),
-            (SfxKey::Step1, asset_server.load("audio/sfx/step1.ogg")),
-            (SfxKey::Step2, asset_server.load("audio/sfx/step2.ogg")),
-            (SfxKey::Step3, asset_server.load("audio/sfx/step3.ogg")),
-            (SfxKey::Step4, asset_server.load("audio/sfx/step4.ogg")),
+            (SfxKey::Kick, asset_server.load("audio/sfx/kick1.ogg")),
+            (SfxKey::Snare, asset_server.load("audio/sfx/snare1.ogg")),
+            (SfxKey::HiHat, asset_server.load("audio/sfx/hihat1.ogg")),
+            (SfxKey::Synth(0), asset_server.load("audio/sfx/synth1.ogg")),
         ]
-        .into()
+        .into();
+
+        for i in 0..NUM_SYNTH_NOTES {
+            map.insert(
+                SfxKey::Synth(i),
+                asset_server.load(format!("audio/sfx/synth{i}.ogg")),
+            );
+        }
+
+        map
     }
 }
 

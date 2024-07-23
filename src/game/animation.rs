@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use super::{audio::sfx::PlaySfx, movement::MovementController};
+use super::movement::MovementController;
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
@@ -18,11 +18,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             update_animation_timer.in_set(AppSet::TickTimers),
-            (
-                update_animation_movement,
-                update_animation_atlas,
-                trigger_step_sfx,
-            )
+            (update_animation_movement, update_animation_atlas)
                 .chain()
                 .in_set(AppSet::Update),
         ),
@@ -60,18 +56,6 @@ fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut TextureAtlas)
     for (animation, mut atlas) in &mut query {
         if animation.changed() {
             atlas.index = animation.get_atlas_index();
-        }
-    }
-}
-
-/// If the player is moving, play a step sound effect synchronized with the animation.
-fn trigger_step_sfx(mut commands: Commands, mut step_query: Query<&PlayerAnimation>) {
-    for animation in &mut step_query {
-        if animation.state == PlayerAnimationState::Walking
-            && animation.changed()
-            && animation.frame == 1
-        {
-            commands.trigger(PlaySfx::RandomStep);
         }
     }
 }

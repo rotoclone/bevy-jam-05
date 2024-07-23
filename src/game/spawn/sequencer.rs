@@ -1,29 +1,47 @@
 //! Spawn the sequencer.
 
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::{
-    game::assets::{FontKey, HandleMap},
+    game::{
+        assets::{FontKey, HandleMap, SfxKey},
+        audio::sfx::PlaySfx,
+    },
     screen::Screen,
     ui::{
         interaction::{InteractionPalette, InteractionQuery},
         palette::{
             ACTIVE_BEAT_BUTTON, HOVERED_ACTIVE_BEAT_BUTTON, HOVERED_INACTIVE_BEAT_BUTTON,
-            INACTIVE_BEAT_BUTTON,
+            INACTIVE_BEAT_BUTTON, PLAYING_ACTIVE_BEAT_BUTTON, PLAYING_INACTIVE_BEAT_BUTTON,
         },
         widgets::Widgets,
     },
+    AppSet,
 };
+
+pub const NUM_SYNTH_NOTES: usize = 8;
+pub const NUM_BEATS_IN_SEQUENCE: usize = 32;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_sequencer);
+    app.observe(play_sequence);
+    app.observe(pause_sequence);
+    app.observe(reset_sequence);
+    app.observe(play_beat);
     app.register_type::<Sequencer>();
     app.register_type::<GameAction>();
     app.register_type::<SequencerAction>();
+    app.insert_resource(Sequence::new());
+    app.insert_resource(SequenceState::new());
     app.add_systems(Update, handle_game_action.run_if(in_state(Screen::Playing)));
     app.add_systems(
         Update,
-        handle_sequencer_action.run_if(in_state(Screen::Playing)),
+        (
+            handle_sequencer_action.run_if(in_state(Screen::Playing)),
+            update_sequence_timer.in_set(AppSet::TickTimers),
+        ),
     );
 }
 
@@ -33,6 +51,17 @@ pub struct SpawnSequencer;
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct Sequencer;
+
+/// The current sequence, ordered by beats. If a row appears in the set for a given beat, then that instrument is active on that beat.
+#[derive(Resource)]
+pub struct Sequence(Vec<HashSet<SequencerRow>>);
+
+impl Sequence {
+    /// Creates a sequence with all the notes off
+    fn new() -> Sequence {
+        Sequence((0..NUM_BEATS_IN_SEQUENCE).map(|_| HashSet::new()).collect())
+    }
+}
 
 fn spawn_sequencer(
     _trigger: Trigger<SpawnSequencer>,
@@ -74,14 +103,112 @@ enum GameAction {
     Stop,
 }
 
-fn handle_game_action(mut button_query: InteractionQuery<&GameAction>) {
+fn handle_game_action(mut button_query: InteractionQuery<&GameAction>, mut commands: Commands) {
     for (interaction, action) in &mut button_query {
         if matches!(interaction, Interaction::Pressed) {
             match action {
-                GameAction::Play => println!("play pressed"),   //TODO
-                GameAction::Pause => println!("pause pressed"), //TODO
-                GameAction::Stop => println!("stop pressed"),   //TODO
+                GameAction::Play => commands.trigger(PlaySequence),
+                GameAction::Pause => commands.trigger(PauseSequence),
+                GameAction::Stop => commands.trigger(ResetSequence),
             }
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct SequenceState {
+    beat_timer: Timer,
+    beat: usize,
+}
+
+impl SequenceState {
+    fn new() -> SequenceState {
+        let mut beat_timer = Timer::from_seconds(0.15, TimerMode::Repeating);
+        beat_timer.pause();
+        SequenceState {
+            beat_timer,
+            beat: 0,
+        }
+    }
+}
+
+/// Event that starts the sequence playing
+#[derive(Event)]
+struct PlaySequence;
+
+fn play_sequence(
+    _: Trigger<PlaySequence>,
+    mut sequence_state: ResMut<SequenceState>,
+    mut commands: Commands,
+) {
+    if sequence_state.beat_timer.elapsed().is_zero() {
+        commands.trigger(PlayBeat(0));
+    }
+    sequence_state.beat_timer.unpause();
+}
+
+/// Event that stops the sequence and without resetting it to the beginning
+#[derive(Event)]
+struct PauseSequence;
+
+fn pause_sequence(_: Trigger<PauseSequence>, mut sequence_state: ResMut<SequenceState>) {
+    sequence_state.beat_timer.pause();
+}
+
+/// Event that stops the sequence and resets it to the beginning
+#[derive(Event)]
+struct ResetSequence;
+
+fn reset_sequence(
+    _: Trigger<ResetSequence>,
+    mut sequence_state: ResMut<SequenceState>,
+    mut button_query: Query<(&InteractionPalette, &mut BackgroundColor), With<BeatButton>>,
+) {
+    sequence_state.beat = 0;
+    sequence_state.beat_timer.pause();
+    sequence_state.beat_timer.reset();
+
+    for (palette, mut background_color) in button_query.iter_mut() {
+        *background_color = BackgroundColor(palette.none);
+    }
+}
+
+/// Event that plays all the active notes on a single beat
+#[derive(Event)]
+struct PlayBeat(usize);
+
+fn update_sequence_timer(
+    time: Res<Time>,
+    mut sequence_state: ResMut<SequenceState>,
+    mut commands: Commands,
+) {
+    sequence_state.beat_timer.tick(time.delta());
+    if sequence_state.beat_timer.just_finished() {
+        sequence_state.beat = (sequence_state.beat + 1) % NUM_BEATS_IN_SEQUENCE;
+        commands.trigger(PlayBeat(sequence_state.beat))
+    }
+}
+
+fn play_beat(
+    trigger: Trigger<PlayBeat>,
+    sequence: Res<Sequence>,
+    mut button_query: Query<(&BeatButton, &InteractionPalette, &mut BackgroundColor)>,
+    mut commands: Commands,
+) {
+    let beat = trigger.event().0;
+    for row in &sequence.0[beat] {
+        commands.trigger(PlaySfx(row.to_sfx_key()));
+    }
+
+    for (button, palette, mut background_color) in button_query.iter_mut() {
+        if button.beat == beat {
+            if button.active {
+                *background_color = BackgroundColor(PLAYING_ACTIVE_BEAT_BUTTON);
+            } else {
+                *background_color = BackgroundColor(PLAYING_INACTIVE_BEAT_BUTTON);
+            }
+        } else {
+            *background_color = BackgroundColor(palette.none);
         }
     }
 }
@@ -98,6 +225,8 @@ fn handle_sequencer_action(
         &mut InteractionPalette,
         &mut BeatButton,
     )>,
+    mut sequence: ResMut<Sequence>,
+    mut commands: Commands,
 ) {
     for (interaction, (action, mut palette, mut beat_button)) in &mut button_query {
         if matches!(interaction, Interaction::Pressed) {
@@ -106,10 +235,13 @@ fn handle_sequencer_action(
                     println!("toggling beat button {beat_button:?}"); //TODO
                     beat_button.toggle();
                     if beat_button.active {
+                        sequence.0[beat_button.beat].insert(beat_button.row);
+                        commands.trigger(PlaySfx(beat_button.row.to_sfx_key()));
                         palette.none = ACTIVE_BEAT_BUTTON;
                         palette.hovered = HOVERED_ACTIVE_BEAT_BUTTON;
                         palette.pressed = INACTIVE_BEAT_BUTTON;
                     } else {
+                        sequence.0[beat_button.beat].remove(&beat_button.row);
                         palette.none = INACTIVE_BEAT_BUTTON;
                         palette.hovered = HOVERED_INACTIVE_BEAT_BUTTON;
                         palette.pressed = ACTIVE_BEAT_BUTTON;
@@ -119,9 +251,6 @@ fn handle_sequencer_action(
         }
     }
 }
-
-const NUM_SYNTH_NOTES: u32 = 8;
-const NUM_BEATS_IN_SEQUENCE: u32 = 32;
 
 fn spawn_controls(parent: &mut ChildBuilder, font_handles: &HandleMap<FontKey>) {
     parent
@@ -177,7 +306,7 @@ fn spawn_synth_section(parent: &mut ChildBuilder, font_handles: &HandleMap<FontK
             ..default()
         })
         .with_children(|children| {
-            for i in 0..NUM_SYNTH_NOTES {
+            for i in (0..NUM_SYNTH_NOTES).rev() {
                 spawn_sequencer_row(children, SequencerRow::SynthNote(i), font_handles);
             }
         });
@@ -207,12 +336,24 @@ fn spawn_percussion_section(parent: &mut ChildBuilder, font_handles: &HandleMap<
         });
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub enum SequencerRow {
-    SynthNote(u32),
+    SynthNote(usize),
     HiHat,
     Snare,
     Kick,
+}
+
+impl SequencerRow {
+    /// Gets the sfx corresponding to this row
+    fn to_sfx_key(self) -> SfxKey {
+        match self {
+            SequencerRow::SynthNote(x) => SfxKey::Synth(x),
+            SequencerRow::HiHat => SfxKey::HiHat,
+            SequencerRow::Snare => SfxKey::Snare,
+            SequencerRow::Kick => SfxKey::Kick,
+        }
+    }
 }
 
 impl std::fmt::Display for SequencerRow {
@@ -229,7 +370,7 @@ impl std::fmt::Display for SequencerRow {
 #[derive(Component, PartialEq, Eq, Debug)]
 pub struct BeatButton {
     row: SequencerRow,
-    beat: u32,
+    beat: usize,
     active: bool,
 }
 

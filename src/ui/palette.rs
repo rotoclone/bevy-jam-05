@@ -14,3 +14,5 @@ pub const INACTIVE_BEAT_BUTTON: Color = Color::srgb(0.3, 0.3, 0.3);
 pub const ACTIVE_BEAT_BUTTON: Color = Color::srgb(0.3, 0.7, 0.3);
 pub const HOVERED_INACTIVE_BEAT_BUTTON: Color = Color::srgb(0.4, 0.4, 0.4);
 pub const HOVERED_ACTIVE_BEAT_BUTTON: Color = Color::srgb(0.3, 0.85, 0.3);
+pub const PLAYING_ACTIVE_BEAT_BUTTON: Color = Color::srgb(0.7, 0.3, 0.3);
+pub const PLAYING_INACTIVE_BEAT_BUTTON: Color = Color::srgb(0.2, 0.2, 0.2);
