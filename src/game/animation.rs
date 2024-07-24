@@ -26,16 +26,11 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 /// Update the sprite direction and animation state (idling/walking).
-fn update_animation_movement(
-    mut player_query: Query<(&MovementController, &mut Sprite, &mut PlayerAnimation)>,
-) {
-    for (controller, mut sprite, mut animation) in &mut player_query {
-        let dx = controller.0.x;
-        if dx != 0.0 {
-            sprite.flip_x = dx < 0.0;
-        }
-
-        let animation_state = if controller.0 == Vec2::ZERO {
+fn update_animation_movement(mut player_query: Query<(&MovementController, &mut PlayerAnimation)>) {
+    for (controller, mut animation) in &mut player_query {
+        let animation_state = if controller.jumping {
+            PlayerAnimationState::Jumping
+        } else if controller.speed < f32::EPSILON {
             PlayerAnimationState::Idling
         } else {
             PlayerAnimationState::Walking
@@ -74,6 +69,7 @@ pub struct PlayerAnimation {
 pub enum PlayerAnimationState {
     Idling,
     Walking,
+    Jumping,
 }
 
 impl PlayerAnimation {
@@ -103,6 +99,17 @@ impl PlayerAnimation {
         }
     }
 
+    const JUMPING_FRAMES: usize = 3;
+    const JUMPING_INTERVAL: Duration = Duration::from_millis(40);
+
+    fn jumping() -> Self {
+        Self {
+            timer: Timer::new(Self::JUMPING_INTERVAL, TimerMode::Repeating),
+            frame: 0,
+            state: PlayerAnimationState::Jumping,
+        }
+    }
+
     pub fn new() -> Self {
         Self::idling()
     }
@@ -117,6 +124,7 @@ impl PlayerAnimation {
             % match self.state {
                 PlayerAnimationState::Idling => Self::IDLE_FRAMES,
                 PlayerAnimationState::Walking => Self::WALKING_FRAMES,
+                PlayerAnimationState::Jumping => Self::JUMPING_FRAMES,
             };
     }
 
@@ -126,6 +134,7 @@ impl PlayerAnimation {
             match state {
                 PlayerAnimationState::Idling => *self = Self::idling(),
                 PlayerAnimationState::Walking => *self = Self::walking(),
+                PlayerAnimationState::Jumping => *self = Self::jumping(),
             }
         }
     }
@@ -140,6 +149,7 @@ impl PlayerAnimation {
         match self.state {
             PlayerAnimationState::Idling => self.frame,
             PlayerAnimationState::Walking => 7 + self.frame,
+            PlayerAnimationState::Jumping => 14 + self.frame,
         }
     }
 }

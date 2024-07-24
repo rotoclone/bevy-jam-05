@@ -8,6 +8,7 @@ use crate::{
     game::{
         assets::{FontKey, HandleMap, SfxKey},
         audio::sfx::PlaySfx,
+        movement::PlayerAction,
     },
     screen::Screen,
     ui::{
@@ -23,6 +24,8 @@ use crate::{
 
 pub const NUM_SYNTH_NOTES: usize = 8;
 pub const NUM_BEATS_IN_SEQUENCE: usize = 32;
+
+const SPEED_MULTIPLIER: f32 = 50.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_sequencer);
@@ -198,6 +201,7 @@ fn play_beat(
     let beat = trigger.event().0;
     for row in &sequence.0[beat] {
         commands.trigger(PlaySfx(row.to_sfx_key()));
+        commands.trigger(row.to_player_action());
     }
 
     for (button, palette, mut background_color) in button_query.iter_mut() {
@@ -352,6 +356,16 @@ impl SequencerRow {
             SequencerRow::HiHat => SfxKey::HiHat,
             SequencerRow::Snare => SfxKey::Snare,
             SequencerRow::Kick => SfxKey::Kick,
+        }
+    }
+
+    /// Gets the player action corresponding to this row
+    fn to_player_action(self) -> PlayerAction {
+        match self {
+            SequencerRow::SynthNote(x) => PlayerAction::SetSpeed(x as f32 * SPEED_MULTIPLIER),
+            SequencerRow::HiHat => todo!(), //TODO
+            SequencerRow::Snare => todo!(), //TODO
+            SequencerRow::Kick => PlayerAction::Jump,
         }
     }
 }

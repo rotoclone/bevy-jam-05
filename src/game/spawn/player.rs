@@ -6,7 +6,7 @@ use crate::{
     game::{
         animation::PlayerAnimation,
         assets::{HandleMap, ImageKey},
-        movement::{Movement, MovementController, WrapWithinWindow},
+        movement::{MovementController, WrapWithinWindow},
     },
     screen::Screen,
 };
@@ -42,15 +42,15 @@ fn spawn_player(
         Player,
         SpriteBundle {
             texture: image_handles.get(ImageKey::Player),
-            transform: Transform::from_scale(Vec2::splat(3.0).extend(1.0)),
+            transform: Transform::from_scale(Vec2::splat(3.0).extend(1.0))
+                .with_translation(Vec3::new(-500.0, 150.0, 0.0)),
             ..Default::default()
         },
         TextureAtlas {
             layout: texture_atlas_layout.clone(),
             index: player_animation.get_atlas_index(),
         },
-        MovementController::default(),
-        Movement { speed: 200.0 },
+        MovementController::new(),
         WrapWithinWindow,
         player_animation,
         StateScoped(Screen::Playing),

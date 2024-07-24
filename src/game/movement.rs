@@ -8,15 +8,9 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
-    // Record directional input as movement controls.
-    app.register_type::<MovementController>();
-    app.add_systems(
-        Update,
-        record_movement_controller.in_set(AppSet::RecordInput),
-    );
+    app.observe(do_player_action);
 
-    // Apply movement based on controls.
-    app.register_type::<(Movement, WrapWithinWindow)>();
+    app.register_type::<WrapWithinWindow>();
     app.add_systems(
         Update,
         (apply_movement, wrap_within_window)
@@ -25,55 +19,47 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct MovementController(pub Vec2);
+/// Event that makes the player do something
+#[derive(Event)]
+pub enum PlayerAction {
+    SetSpeed(f32),
+    Jump,
+}
 
-fn record_movement_controller(
-    input: Res<ButtonInput<KeyCode>>,
-    mut controller_query: Query<&mut MovementController>,
+fn do_player_action(
+    trigger: Trigger<PlayerAction>,
+    mut movement_query: Query<&mut MovementController>,
 ) {
-    // Collect directional input.
-    let mut intent = Vec2::ZERO;
-    if input.pressed(KeyCode::KeyW) || input.pressed(KeyCode::ArrowUp) {
-        intent.y += 1.0;
-    }
-    if input.pressed(KeyCode::KeyS) || input.pressed(KeyCode::ArrowDown) {
-        intent.y -= 1.0;
-    }
-    if input.pressed(KeyCode::KeyA) || input.pressed(KeyCode::ArrowLeft) {
-        intent.x -= 1.0;
-    }
-    if input.pressed(KeyCode::KeyD) || input.pressed(KeyCode::ArrowRight) {
-        intent.x += 1.0;
-    }
-
-    // Normalize so that diagonal movement has the same speed as
-    // horizontal and vertical movement.
-    let intent = intent.normalize_or_zero();
-
-    // Apply movement intent to controllers.
-    for mut controller in &mut controller_query {
-        controller.0 = intent;
+    for mut controller in &mut movement_query {
+        match trigger.event() {
+            PlayerAction::SetSpeed(x) => controller.speed = *x,
+            PlayerAction::Jump => println!("jumpin"), //TODO
+        }
     }
 }
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub struct Movement {
-    /// Since Bevy's default 2D camera setup is scaled such that
-    /// one unit is one pixel, you can think of this as
-    /// "How many pixels per second should the player move?"
-    /// Note that physics engines may use different unit/pixel ratios.
+pub struct MovementController {
     pub speed: f32,
+    pub jumping: bool,
+}
+
+impl MovementController {
+    pub fn new() -> MovementController {
+        MovementController {
+            speed: 0.0,
+            jumping: false,
+        }
+    }
 }
 
 fn apply_movement(
     time: Res<Time>,
-    mut movement_query: Query<(&MovementController, &Movement, &mut Transform)>,
+    mut movement_query: Query<(&MovementController, &mut Transform)>,
 ) {
-    for (controller, movement, mut transform) in &mut movement_query {
-        let velocity = movement.speed * controller.0;
+    for (controller, mut transform) in &mut movement_query {
+        let velocity = Vec2::new(controller.speed, 0.0);
         transform.translation += velocity.extend(0.0) * time.delta_seconds();
     }
 }
