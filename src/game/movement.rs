@@ -80,19 +80,13 @@ fn apply_movement(
         let velocity = Vec2::new(controller.speed, 0.0);
         transform.translation += velocity.extend(0.0) * time.delta_seconds();
 
+        // why import a physics library when I can just implement a bad one myself
         let bottom_of_player = transform.translation.y - player.collider_radius;
         let distance_from_floor = bottom_of_player - FLOOR_Y;
         if distance_from_floor > f32::EPSILON || controller.vertical_velocity > f32::EPSILON {
             // player is in the air, or should be in the air
             let proposed_y =
                 transform.translation.y + (controller.vertical_velocity * time.delta_seconds());
-            dbg!(
-                transform.translation,
-                player.collider_radius,
-                bottom_of_player,
-                distance_from_floor
-            ); //TODO
-            dbg!(controller.vertical_velocity); //TODO
             let min_y = FLOOR_Y + player.collider_radius;
             transform.translation.y = proposed_y.max(min_y);
             controller.vertical_velocity -= GRAVITY * time.delta_seconds();
