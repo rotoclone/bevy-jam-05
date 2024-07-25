@@ -6,10 +6,14 @@ use crate::{
     game::{
         animation::PlayerAnimation,
         assets::{HandleMap, ImageKey},
-        movement::{MovementController, WrapWithinWindow},
+        movement::{MovementController, WrapWithinLevel},
     },
     screen::Screen,
 };
+
+use super::level::{FLOOR_Y, LEVEL_WIDTH};
+
+const PLAYER_SCALE: f32 = 3.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_player);
@@ -19,9 +23,11 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Event, Debug)]
 pub struct SpawnPlayer;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Default, Reflect)]
 #[reflect(Component)]
-pub struct Player;
+pub struct Player {
+    pub collider_radius: f32,
+}
 
 fn spawn_player(
     _trigger: Trigger<SpawnPlayer>,
@@ -33,17 +39,24 @@ fn spawn_player(
     // By attaching it to a [`SpriteBundle`] and providing an index, we can specify which section of the image we want to see.
     // We will use this to animate our player character. You can learn more about texture atlases in this example:
     // https://github.com/bevyengine/bevy/blob/latest/examples/2d/texture_atlas.rs
-    let layout = TextureAtlasLayout::from_grid(UVec2::splat(24), 7, 2, Some(UVec2::splat(0)), None);
+    let layout = TextureAtlasLayout::from_grid(UVec2::splat(24), 7, 3, Some(UVec2::splat(0)), None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
+    let player_radius = (24.0 * PLAYER_SCALE) / 2.0;
 
     commands.spawn((
         Name::new("Player"),
-        Player,
+        Player {
+            collider_radius: player_radius,
+        },
         SpriteBundle {
             texture: image_handles.get(ImageKey::Player),
-            transform: Transform::from_scale(Vec2::splat(3.0).extend(1.0))
-                .with_translation(Vec3::new(-500.0, 150.0, 0.0)),
+            transform: Transform::from_scale(Vec2::splat(PLAYER_SCALE).extend(1.0))
+                .with_translation(Vec3::new(
+                    (-LEVEL_WIDTH / 2.0) + player_radius,
+                    FLOOR_Y + 50.0,
+                    0.0,
+                )),
             ..Default::default()
         },
         TextureAtlas {
@@ -51,7 +64,7 @@ fn spawn_player(
             index: player_animation.get_atlas_index(),
         },
         MovementController::new(),
-        WrapWithinWindow,
+        WrapWithinLevel,
         player_animation,
         StateScoped(Screen::Playing),
     ));

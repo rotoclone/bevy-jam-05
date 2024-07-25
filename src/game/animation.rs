@@ -99,8 +99,8 @@ impl PlayerAnimation {
         }
     }
 
-    const JUMPING_FRAMES: usize = 3;
-    const JUMPING_INTERVAL: Duration = Duration::from_millis(40);
+    const JUMPING_FRAMES: usize = 4;
+    const JUMPING_INTERVAL: Duration = Duration::from_millis(100);
 
     fn jumping() -> Self {
         Self {
