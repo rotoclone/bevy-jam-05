@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use crate::AppSet;
 
 use super::spawn::{
-    level::{FLOOR_Y, LEVEL_WIDTH},
+    level::{Floor, RectCollider},
     player::Player,
 };
 
@@ -21,7 +21,6 @@ const JUMP_VELOCITY: f32 = 600.0;
 pub(super) fn plugin(app: &mut App) {
     app.observe(do_player_action);
 
-    app.register_type::<WrapWithinLevel>();
     app.add_systems(
         Update,
         (apply_movement, wrap_within_level)
@@ -75,39 +74,56 @@ impl MovementController {
 fn apply_movement(
     time: Res<Time>,
     mut movement_query: Query<(&Player, &mut MovementController, &mut Transform)>,
+    collider_query: Query<(&Transform, &RectCollider), Without<Player>>,
 ) {
-    for (player, mut controller, mut transform) in &mut movement_query {
+    for (player, mut controller, mut player_transform) in &mut movement_query {
         let velocity = Vec2::new(controller.speed, 0.0);
-        transform.translation += velocity.extend(0.0) * time.delta_seconds();
+        player_transform.translation += velocity.extend(0.0) * time.delta_seconds();
+        //TODO check for obstacles in front of the player
 
         // why import a physics library when I can just implement a bad one myself
-        let bottom_of_player = transform.translation.y - player.collider_radius;
-        let distance_from_floor = bottom_of_player - FLOOR_Y;
-        if distance_from_floor > f32::EPSILON || controller.vertical_velocity > f32::EPSILON {
-            // player is in the air, or should be in the air
-            let proposed_y =
-                transform.translation.y + (controller.vertical_velocity * time.delta_seconds());
-            let min_y = FLOOR_Y + player.collider_radius;
-            transform.translation.y = proposed_y.max(min_y);
-            controller.vertical_velocity -= GRAVITY * time.delta_seconds();
-        } else {
-            // player is on the ground
-            controller.vertical_velocity = 0.0;
-            controller.jumping = false;
+        for (transform, collider) in &collider_query {
+            // first check if the player is above the thing
+            let player_left_edge = player_transform.translation.x - (player.collider.x / 2.0);
+            let player_right_edge = player_transform.translation.x + (player.collider.x / 2.0);
+            let obstacle_left_edge = transform.translation.x - (collider.0.x / 2.0);
+            let obstacle_right_edge = transform.translation.x + (collider.0.x / 2.0);
+
+            if player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge {
+                // player isn't above the obstacle so it doesn't matter
+                continue;
+            }
+
+            let bottom_of_player = player_transform.translation.y - (player.collider.y / 2.0);
+            let top_of_obstacle = transform.translation.y + (collider.0.y / 2.0);
+            let distance_from_floor = bottom_of_player - top_of_obstacle;
+            if distance_from_floor > f32::EPSILON || controller.vertical_velocity > f32::EPSILON {
+                // player is in the air, or should be in the air
+                let proposed_y = player_transform.translation.y
+                    + (controller.vertical_velocity * time.delta_seconds());
+                let min_y = top_of_obstacle + (player.collider.y / 2.0);
+                player_transform.translation.y = proposed_y.max(min_y);
+                controller.vertical_velocity -= GRAVITY * time.delta_seconds();
+            } else {
+                // player is on the obstacle
+                controller.vertical_velocity = 0.0;
+                controller.jumping = false;
+            }
         }
     }
 }
 
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-pub struct WrapWithinLevel;
-
-fn wrap_within_level(mut wrap_query: Query<&mut Transform, With<WrapWithinLevel>>) {
-    let size = Vec2::new(LEVEL_WIDTH + (24.0 * 3.0), LEVEL_WIDTH);
-    let half_size = size / 2.0;
-    for mut transform in &mut wrap_query {
-        let position = transform.translation.xy();
-        let wrapped = (position + half_size).rem_euclid(size) - half_size;
-        transform.translation = wrapped.extend(transform.translation.z);
+fn wrap_within_level(
+    mut wrap_query: Query<(&mut Transform, &Player), Without<Floor>>,
+    floor_query: Query<(&Transform, &RectCollider), With<Floor>>,
+) {
+    if let Ok((_, floor_collider)) = floor_query.get_single() {
+        for (mut transform, player) in &mut wrap_query {
+            let size = Vec2::new(floor_collider.0.x + (player.collider.x * 2.0), 1000.0);
+            let half_size = size / 2.0;
+            let position = transform.translation.xy();
+            let wrapped = (position + half_size).rem_euclid(size) - half_size;
+            transform.translation = wrapped.extend(transform.translation.z);
+        }
     }
 }

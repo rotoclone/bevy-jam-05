@@ -6,12 +6,12 @@ use crate::{
     game::{
         animation::PlayerAnimation,
         assets::{HandleMap, ImageKey},
-        movement::{MovementController, WrapWithinLevel},
+        movement::MovementController,
     },
     screen::Screen,
 };
 
-use super::level::{FLOOR_Y, LEVEL_WIDTH};
+use super::level::{FLOOR_WIDTH, FLOOR_Y};
 
 const PLAYER_SCALE: f32 = 3.0;
 
@@ -26,7 +26,7 @@ pub struct SpawnPlayer;
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default, Reflect)]
 #[reflect(Component)]
 pub struct Player {
-    pub collider_radius: f32,
+    pub collider: Vec2,
 }
 
 fn spawn_player(
@@ -42,19 +42,19 @@ fn spawn_player(
     let layout = TextureAtlasLayout::from_grid(UVec2::splat(24), 7, 3, Some(UVec2::splat(0)), None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
-    let player_radius = (24.0 * PLAYER_SCALE) / 2.0;
+    let player_size = 24.0 * PLAYER_SCALE;
 
     commands.spawn((
         Name::new("Player"),
         Player {
-            collider_radius: player_radius,
+            collider: Vec2::new(player_size, player_size),
         },
         SpriteBundle {
             texture: image_handles.get(ImageKey::Player),
             transform: Transform::from_scale(Vec2::splat(PLAYER_SCALE).extend(1.0))
                 .with_translation(Vec3::new(
-                    (-LEVEL_WIDTH / 2.0) + player_radius,
-                    FLOOR_Y + 50.0,
+                    (-FLOOR_WIDTH / 2.0) + (player_size / 2.0),
+                    FLOOR_Y + player_size,
                     0.0,
                 )),
             ..Default::default()
@@ -64,7 +64,6 @@ fn spawn_player(
             index: player_animation.get_atlas_index(),
         },
         MovementController::new(),
-        WrapWithinLevel,
         player_animation,
         StateScoped(Screen::Playing),
     ));

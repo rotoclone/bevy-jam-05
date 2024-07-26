@@ -8,7 +8,7 @@ use super::{player::SpawnPlayer, sequencer::SpawnSequencer};
 pub const FLOOR_Y: f32 = 100.0;
 
 /// The width of the level, in pixels
-pub const LEVEL_WIDTH: f32 = 1000.0;
+pub const FLOOR_WIDTH: f32 = 1280.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_level);
@@ -16,6 +16,9 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Event, Debug)]
 pub struct SpawnLevel;
+
+#[derive(Component)]
+pub struct RectCollider(pub Vec2);
 
 #[derive(Component)]
 pub struct Floor;
@@ -29,41 +32,40 @@ fn spawn_level(_trigger: Trigger<SpawnLevel>, mut commands: Commands) {
         Floor,
         SpriteBundle {
             sprite: Sprite {
-                custom_size: Some(Vec2::new(LEVEL_WIDTH, 1.0)),
+                custom_size: Some(Vec2::new(FLOOR_WIDTH, 2.0)),
                 color: Color::BLACK,
                 ..default()
             },
             transform: Transform::from_translation(Vec3::new(0.0, FLOOR_Y, 0.0)),
             ..default()
         },
+        RectCollider(Vec2::new(FLOOR_WIDTH, 2.0)),
     ));
 
     let curtain_width = 5000.0;
     let curtain_height = 5000.0;
-    let curtain_center_distance = (curtain_width / 2.0) + (LEVEL_WIDTH / 2.0);
+    let curtain_center_distance = (curtain_width / 2.0) + (FLOOR_WIDTH / 2.0);
     commands.spawn((
         Name::new("Left curtain"),
-        Floor,
         SpriteBundle {
             sprite: Sprite {
                 custom_size: Some(Vec2::new(curtain_width, curtain_height)),
                 color: Color::BLACK,
                 ..default()
             },
-            transform: Transform::from_translation(Vec3::new(-curtain_center_distance, 0.0, 0.0)),
+            transform: Transform::from_translation(Vec3::new(-curtain_center_distance, 0.0, 1.0)),
             ..default()
         },
     ));
     commands.spawn((
         Name::new("Right curtain"),
-        Floor,
         SpriteBundle {
             sprite: Sprite {
                 custom_size: Some(Vec2::new(curtain_width, curtain_height)),
                 color: Color::BLACK,
                 ..default()
             },
-            transform: Transform::from_translation(Vec3::new(curtain_center_distance, 0.0, 0.0)),
+            transform: Transform::from_translation(Vec3::new(curtain_center_distance, 0.0, 1.0)),
             ..default()
         },
     ));
