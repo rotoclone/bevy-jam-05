@@ -77,27 +77,77 @@ fn apply_movement(
     collider_query: Query<(&Transform, &RectCollider), Without<Player>>,
 ) {
     for (player, mut controller, mut player_transform) in &mut movement_query {
-        let velocity = Vec2::new(controller.speed, 0.0);
-        player_transform.translation += velocity.extend(0.0) * time.delta_seconds();
-        //TODO check for obstacles in front of the player
-
         // why import a physics library when I can just implement a bad one myself
+        let player_left_edge = player_transform.translation.x - (player.collider.x / 2.0);
+        let player_right_edge = player_transform.translation.x + (player.collider.x / 2.0);
+        let player_top = player_transform.translation.y + (player.collider.y / 2.0);
+        let player_bottom = player_transform.translation.y - (player.collider.y / 2.0);
+
+        // find closest thing to run into when moving to the right
+        let mut left_of_closest_wall = None;
         for (transform, collider) in &collider_query {
-            // first check if the player is above the thing
-            let player_left_edge = player_transform.translation.x - (player.collider.x / 2.0);
-            let player_right_edge = player_transform.translation.x + (player.collider.x / 2.0);
+            let obstacle_left_edge = transform.translation.x - (collider.0.x / 2.0);
+            let obstacle_top = transform.translation.y + (collider.0.y / 2.0);
+            let obstacle_bottom = transform.translation.y - (collider.0.y / 2.0);
+
+            if !(player_bottom > obstacle_top || player_top < obstacle_bottom)
+                && player_right_edge <= obstacle_left_edge
+            {
+                // player is to the left of obstacle and at the same height
+                let distance_from_left_side_of_obstacle = obstacle_left_edge - player_right_edge;
+                if let Some(other_left) = left_of_closest_wall {
+                    let other_distance_from_left = other_left - player_right_edge;
+                    if distance_from_left_side_of_obstacle < other_distance_from_left {
+                        left_of_closest_wall = Some(distance_from_left_side_of_obstacle);
+                    }
+                } else {
+                    left_of_closest_wall = Some(distance_from_left_side_of_obstacle);
+                }
+            }
+        }
+
+        // move rightwards
+        if let Some(left_of_obstacle) = left_of_closest_wall {
+            let distance_from_left_of_obstacle = left_of_obstacle - player_right_edge;
+            if distance_from_left_of_obstacle > f32::EPSILON {
+                // player can move
+                let proposed_x =
+                    player_transform.translation.x + (controller.speed * time.delta_seconds());
+                let max_x = left_of_obstacle - (player.collider.x / 2.0);
+                player_transform.translation.x = proposed_x.min(max_x);
+            }
+        } else {
+            // no walls to worry about running into
+            player_transform.translation.x += controller.speed * time.delta_seconds();
+        }
+
+        // find closest thing to run into when falling
+        let mut top_of_closest_floor = None;
+        for (transform, collider) in &collider_query {
             let obstacle_left_edge = transform.translation.x - (collider.0.x / 2.0);
             let obstacle_right_edge = transform.translation.x + (collider.0.x / 2.0);
+            let obstacle_top = transform.translation.y + (collider.0.y / 2.0);
 
-            if player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge {
-                // player isn't above the obstacle so it doesn't matter
-                continue;
+            if !(player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge) {
+                // player is above obstacle
+                let distance_from_top_of_obstacle = player_bottom - obstacle_top;
+                if let Some(other_top) = top_of_closest_floor {
+                    let other_distance_from_top = player_bottom - other_top;
+                    if distance_from_top_of_obstacle < other_distance_from_top {
+                        top_of_closest_floor = Some(distance_from_top_of_obstacle);
+                    }
+                } else {
+                    top_of_closest_floor = Some(distance_from_top_of_obstacle);
+                }
             }
+        }
 
-            let bottom_of_player = player_transform.translation.y - (player.collider.y / 2.0);
-            let top_of_obstacle = transform.translation.y + (collider.0.y / 2.0);
-            let distance_from_floor = bottom_of_player - top_of_obstacle;
-            if distance_from_floor > f32::EPSILON || controller.vertical_velocity > f32::EPSILON {
+        // move downwards
+        if let Some(top_of_obstacle) = top_of_closest_floor {
+            let distance_from_top_of_obstacle = player_bottom - top_of_obstacle;
+            if distance_from_top_of_obstacle > f32::EPSILON
+                || controller.vertical_velocity > f32::EPSILON
+            {
                 // player is in the air, or should be in the air
                 let proposed_y = player_transform.translation.y
                     + (controller.vertical_velocity * time.delta_seconds());
@@ -109,6 +159,10 @@ fn apply_movement(
                 controller.vertical_velocity = 0.0;
                 controller.jumping = false;
             }
+        } else {
+            // freefall
+            player_transform.translation.y += controller.vertical_velocity * time.delta_seconds();
+            controller.vertical_velocity -= GRAVITY * time.delta_seconds();
         }
     }
 }

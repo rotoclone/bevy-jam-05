@@ -42,6 +42,26 @@ fn spawn_level(_trigger: Trigger<SpawnLevel>, mut commands: Commands) {
         RectCollider(Vec2::new(FLOOR_WIDTH, 2.0)),
     ));
 
+    let box_size = 35.0;
+    let top_of_floor = FLOOR_Y + 1.0;
+    commands.spawn((
+        Name::new("Box"),
+        SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(box_size, box_size)),
+                color: Color::BLACK,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3::new(
+                0.0,
+                top_of_floor + (box_size / 2.0),
+                0.0,
+            )),
+            ..default()
+        },
+        RectCollider(Vec2::new(box_size, box_size)),
+    ));
+
     let curtain_width = 5000.0;
     let curtain_height = 5000.0;
     let curtain_center_distance = (curtain_width / 2.0) + (FLOOR_WIDTH / 2.0);
