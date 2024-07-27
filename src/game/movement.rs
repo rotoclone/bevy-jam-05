@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use crate::AppSet;
 
 use super::spawn::{
-    level::{RectCollider, Spikes, LEVEL_WIDTH},
+    level::{CurrentLevel, RectCollider, SpawnObstacles, Spikes, LEVEL_WIDTH},
     player::{Player, PLAYER_IMAGE_SIZE},
 };
 
@@ -247,15 +247,21 @@ fn check_spike_collisions(
     }
 }
 
-fn wrap_within_level(mut wrap_query: Query<&mut Transform, With<Player>>) {
+fn wrap_within_level(
+    mut wrap_query: Query<&mut Transform, With<Player>>,
+    mut current_level: ResMut<CurrentLevel>,
+    mut commands: Commands,
+) {
     for mut transform in &mut wrap_query {
         let player_left_edge = transform.translation.x - (PLAYER_IMAGE_SIZE / 2.0);
         let level_right_edge = LEVEL_WIDTH / 2.0;
         if player_left_edge > level_right_edge {
-            // player has fully left the level
+            // player has fully left the level, move them back to the left side
             let level_left_edge = -LEVEL_WIDTH / 2.0;
             transform.translation.x = level_left_edge - (PLAYER_IMAGE_SIZE / 2.0);
-            //TODO send event to spawn next level
+            // clear the current level and load the next one
+            current_level.0 += 1;
+            commands.trigger(SpawnObstacles(current_level.0));
         }
     }
 }

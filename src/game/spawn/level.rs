@@ -33,13 +33,17 @@ const TOTAL_LEVELS: u32 = 6;
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_level);
     app.observe(spawn_obstacles);
+    app.insert_resource(CurrentLevel(0));
 }
 
 #[derive(Event, Debug)]
 pub struct SpawnLevel;
 
 #[derive(Event, Debug)]
-pub struct SpawnObstacles(u32);
+pub struct SpawnObstacles(pub u32);
+
+#[derive(Resource, Debug)]
+pub struct CurrentLevel(pub u32);
 
 #[derive(Component)]
 pub struct Obstacle;
@@ -56,10 +60,14 @@ pub struct Floor;
 #[derive(Component)]
 pub struct Spikes;
 
-fn spawn_level(_trigger: Trigger<SpawnLevel>, mut commands: Commands) {
+fn spawn_level(
+    _trigger: Trigger<SpawnLevel>,
+    current_level: Res<CurrentLevel>,
+    mut commands: Commands,
+) {
     commands.trigger(SpawnPlayer);
     commands.trigger(SpawnSequencer);
-    commands.trigger(SpawnObstacles(0));
+    commands.trigger(SpawnObstacles(current_level.0));
 
     commands.spawn((
         Name::new("Floor"),
@@ -149,7 +157,30 @@ fn spawn_level_0(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
 }
 
 fn spawn_level_1(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
-    todo!() //TODO
+    let top_of_floor = FLOOR_Y + (FLOOR_HEIGHT / 2.0);
+    spawn_floor_spikes(
+        Vec2::new(
+            (-BOX_SIZE / 2.0) - (SPIKES_IMAGE_SIZE / 2.0),
+            top_of_floor + (SPIKES_IMAGE_SIZE / 2.0),
+        ),
+        image_handles,
+        commands,
+    );
+    spawn_box(
+        Vec2::new(0.0, top_of_floor + (BOX_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
+    spawn_box(
+        Vec2::new(0.0, top_of_floor + (BOX_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
+    spawn_floor_spikes(
+        Vec2::new(0.0, top_of_floor + BOX_SIZE + (SPIKES_IMAGE_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
 }
 
 fn spawn_level_2(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
