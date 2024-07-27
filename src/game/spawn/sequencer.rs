@@ -236,7 +236,6 @@ fn handle_sequencer_action(
         if matches!(interaction, Interaction::Pressed) {
             match action {
                 SequencerAction::ToggleBeat => {
-                    println!("toggling beat button {beat_button:?}"); //TODO
                     beat_button.toggle();
                     if beat_button.active {
                         sequence.0[beat_button.beat].insert(beat_button.row);

@@ -183,19 +183,19 @@ fn spawn_level_1(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
     );
 }
 
-fn spawn_level_2(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+fn spawn_level_2(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
     todo!() //TODO
 }
 
-fn spawn_level_3(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+fn spawn_level_3(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
     todo!() //TODO
 }
 
-fn spawn_level_4(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+fn spawn_level_4(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
     todo!() //TODO
 }
 
-fn spawn_level_5(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+fn spawn_level_5(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
     todo!() //TODO
 }
 
