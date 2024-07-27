@@ -8,8 +8,8 @@ use bevy::prelude::*;
 use crate::AppSet;
 
 use super::spawn::{
-    level::{Floor, RectCollider},
-    player::Player,
+    level::{RectCollider, Spikes, LEVEL_WIDTH},
+    player::{Player, PLAYER_IMAGE_SIZE},
 };
 
 /// Gravity in pixels/sec^2
@@ -35,7 +35,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (apply_movement, wrap_within_level)
+        (apply_movement, check_spike_collisions, wrap_within_level)
             .chain()
             .in_set(AppSet::Update),
     );
@@ -104,17 +104,24 @@ fn apply_movement(
 ) {
     for (player, mut controller, mut player_transform) in &mut movement_query {
         // why import a physics library when I can just implement a bad one myself
-        let player_left_edge = player_transform.translation.x - (player.collider.x / 2.0);
-        let player_right_edge = player_transform.translation.x + (player.collider.x / 2.0);
-        let player_top = player_transform.translation.y + (player.collider.y / 2.0);
-        let player_bottom = player_transform.translation.y - (player.collider.y / 2.0);
+        let player_left_edge =
+            player_transform.translation.x + player.collider_offset.x - (player.collider.x / 2.0);
+        let player_right_edge =
+            player_transform.translation.x + player.collider_offset.x + (player.collider.x / 2.0);
+        let player_top =
+            player_transform.translation.y + player.collider_offset.y + (player.collider.y / 2.0);
+        let player_bottom =
+            player_transform.translation.y + player.collider_offset.y - (player.collider.y / 2.0);
 
         // find closest thing to run into when moving to the right
         let mut left_of_closest_wall = None;
         for (transform, collider) in &collider_query {
-            let obstacle_left_edge = transform.translation.x - (collider.0.x / 2.0);
-            let obstacle_top = transform.translation.y + (collider.0.y / 2.0);
-            let obstacle_bottom = transform.translation.y - (collider.0.y / 2.0);
+            let obstacle_left_edge =
+                transform.translation.x + collider.offset.x - (collider.bounds.x / 2.0);
+            let obstacle_top =
+                transform.translation.y + collider.offset.y + (collider.bounds.y / 2.0);
+            let obstacle_bottom =
+                transform.translation.y + collider.offset.y - (collider.bounds.y / 2.0);
 
             if !(player_bottom > obstacle_top || player_top < obstacle_bottom)
                 && player_right_edge <= obstacle_left_edge
@@ -139,7 +146,7 @@ fn apply_movement(
                 // player can move
                 let proposed_x =
                     player_transform.translation.x + (controller.speed * time.delta_seconds());
-                let max_x = left_of_obstacle - (player.collider.x / 2.0);
+                let max_x = left_of_obstacle - player.collider_offset.x - (player.collider.x / 2.0);
                 player_transform.translation.x = proposed_x.min(max_x);
             }
         } else {
@@ -150,9 +157,12 @@ fn apply_movement(
         // find closest thing to run into when falling
         let mut top_of_closest_floor = None;
         for (transform, collider) in &collider_query {
-            let obstacle_left_edge = transform.translation.x - (collider.0.x / 2.0);
-            let obstacle_right_edge = transform.translation.x + (collider.0.x / 2.0);
-            let obstacle_top = transform.translation.y + (collider.0.y / 2.0);
+            let obstacle_left_edge =
+                transform.translation.x + collider.offset.x - (collider.bounds.x / 2.0);
+            let obstacle_right_edge =
+                transform.translation.x + collider.offset.x + (collider.bounds.x / 2.0);
+            let obstacle_top =
+                transform.translation.y + collider.offset.y + (collider.bounds.y / 2.0);
 
             if !(player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge) {
                 // player is above obstacle
@@ -177,7 +187,7 @@ fn apply_movement(
                 // player is in the air, or should be in the air
                 let proposed_y = player_transform.translation.y
                     + (controller.vertical_velocity * time.delta_seconds());
-                let min_y = top_of_obstacle + (player.collider.y / 2.0);
+                let min_y = top_of_obstacle - player.collider_offset.y + (player.collider.y / 2.0);
                 player_transform.translation.y = proposed_y.max(min_y);
                 controller.vertical_velocity -= GRAVITY * time.delta_seconds();
             } else {
@@ -193,17 +203,59 @@ fn apply_movement(
     }
 }
 
-fn wrap_within_level(
-    mut wrap_query: Query<(&mut Transform, &Player), Without<Floor>>,
-    floor_query: Query<(&Transform, &RectCollider), With<Floor>>,
+fn check_spike_collisions(
+    player_query: Query<(&Transform, &Player), Without<Spikes>>,
+    spikes_query: Query<(&Transform, &RectCollider), With<Spikes>>,
 ) {
-    if let Ok((_, floor_collider)) = floor_query.get_single() {
-        for (mut transform, player) in &mut wrap_query {
-            let size = Vec2::new(floor_collider.0.x + (player.collider.x * 2.0), 1000.0);
-            let half_size = size / 2.0;
-            let position = transform.translation.xy();
-            let wrapped = (position + half_size).rem_euclid(size) - half_size;
-            transform.translation = wrapped.extend(transform.translation.z);
+    for (player_transform, player) in &player_query {
+        let player_left_edge =
+            player_transform.translation.x + player.collider_offset.x - (player.collider.x / 2.0);
+        let player_right_edge =
+            player_transform.translation.x + player.collider_offset.x + (player.collider.x / 2.0);
+        let player_top =
+            player_transform.translation.y + player.collider_offset.y + (player.collider.y / 2.0);
+        let player_bottom =
+            player_transform.translation.y + player.collider_offset.y - (player.collider.y / 2.0);
+
+        for (spikes_transform, spikes_collider) in &spikes_query {
+            let spikes_left_edge = spikes_transform.translation.x + spikes_collider.offset.x
+                - (spikes_collider.bounds.x / 2.0);
+            let spikes_right_edge = spikes_transform.translation.x
+                + spikes_collider.offset.x
+                + (spikes_collider.bounds.x / 2.0);
+            let spikes_top = spikes_transform.translation.y
+                + spikes_collider.offset.y
+                + (spikes_collider.bounds.y / 2.0);
+            let spikes_bottom = spikes_transform.translation.y + spikes_collider.offset.y
+                - (spikes_collider.bounds.y / 2.0);
+
+            if ((spikes_left_edge - player_right_edge).abs() <= f32::EPSILON)
+                && !(player_bottom > spikes_top || player_top < spikes_bottom)
+            {
+                // player is touching left side of spikes
+                panic!("aah u hit spikes from the left"); //TODO
+            }
+
+            if (((player_bottom - spikes_top).abs() <= f32::EPSILON)
+                || (spikes_bottom - player_top).abs() <= f32::EPSILON)
+                && !(player_left_edge > spikes_right_edge || player_right_edge < spikes_left_edge)
+            {
+                // player is touching top or bottom of spikes
+                panic!("aah u hit spikes from the top or bottom"); //TODO
+            }
+        }
+    }
+}
+
+fn wrap_within_level(mut wrap_query: Query<&mut Transform, With<Player>>) {
+    for mut transform in &mut wrap_query {
+        let player_left_edge = transform.translation.x - (PLAYER_IMAGE_SIZE / 2.0);
+        let level_right_edge = LEVEL_WIDTH / 2.0;
+        if player_left_edge > level_right_edge {
+            // player has fully left the level
+            let level_left_edge = -LEVEL_WIDTH / 2.0;
+            transform.translation.x = level_left_edge - (PLAYER_IMAGE_SIZE / 2.0);
+            //TODO send event to spawn next level
         }
     }
 }
