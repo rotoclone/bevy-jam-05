@@ -363,8 +363,8 @@ impl SequencerRow {
     fn to_player_action(self) -> PlayerAction {
         match self {
             SequencerRow::SynthNote(x) => PlayerAction::SetSpeed(x as f32 * SPEED_MULTIPLIER),
-            SequencerRow::HiHat => todo!(), //TODO
-            SequencerRow::Snare => todo!(), //TODO
+            SequencerRow::HiHat => PlayerAction::Float,
+            SequencerRow::Snare => PlayerAction::Dive,
             SequencerRow::Kick => PlayerAction::Jump,
         }
     }

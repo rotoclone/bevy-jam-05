@@ -13,10 +13,22 @@ use super::spawn::{
 };
 
 /// Gravity in pixels/sec^2
-const GRAVITY: f32 = 2200.0;
+const GRAVITY: f32 = 2300.0;
 
 /// Jump velocity in pixels/sec
-const JUMP_VELOCITY: f32 = 600.0;
+const JUMP_VELOCITY: f32 = 800.0;
+
+/// Velocity added on float in pixels/sec
+const FLOAT_VELOCITY: f32 = 600.0;
+
+/// The maximum final velocity after a float in pixels/sec
+const FLOAT_LIMIT: f32 = -10.0;
+
+/// The velocity added on dive in pixels/sec
+const DIVE_VELOCITY: f32 = -600.0;
+
+/// The minimum final velocity after a dive in pixels/sec
+const DIVE_LIMIT: f32 = -600.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(do_player_action);
@@ -34,6 +46,8 @@ pub(super) fn plugin(app: &mut App) {
 pub enum PlayerAction {
     SetSpeed(f32),
     Jump,
+    Float,
+    Dive,
 }
 
 fn do_player_action(
@@ -47,6 +61,18 @@ fn do_player_action(
                 if !controller.jumping {
                     controller.jumping = true;
                     controller.vertical_velocity = JUMP_VELOCITY;
+                }
+            }
+            PlayerAction::Float => {
+                if controller.jumping && controller.vertical_velocity < FLOAT_LIMIT {
+                    controller.vertical_velocity =
+                        (controller.vertical_velocity + FLOAT_VELOCITY).min(FLOAT_LIMIT);
+                }
+            }
+            PlayerAction::Dive => {
+                if controller.jumping && controller.vertical_velocity > DIVE_LIMIT {
+                    controller.vertical_velocity =
+                        (controller.vertical_velocity + DIVE_VELOCITY).max(DIVE_LIMIT);
                 }
             }
         }
