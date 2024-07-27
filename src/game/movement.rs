@@ -33,6 +33,8 @@ const DIVE_LIMIT: f32 = -600.0;
 pub(super) fn plugin(app: &mut App) {
     app.observe(do_player_action);
 
+    app.insert_resource(TotalDistance(0.0));
+
     app.add_systems(
         Update,
         (apply_movement, check_spike_collisions, wrap_within_level)
@@ -40,6 +42,9 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(AppSet::Update),
     );
 }
+
+#[derive(Resource, Debug)]
+pub struct TotalDistance(pub f32);
 
 /// Event that makes the player do something
 #[derive(Event)]
@@ -101,6 +106,7 @@ fn apply_movement(
     time: Res<Time>,
     mut movement_query: Query<(&Player, &mut MovementController, &mut Transform)>,
     collider_query: Query<(&Transform, &RectCollider), Without<Player>>,
+    mut total_distance: ResMut<TotalDistance>,
 ) {
     for (player, mut controller, mut player_transform) in &mut movement_query {
         // why import a physics library when I can just implement a bad one myself
@@ -140,6 +146,7 @@ fn apply_movement(
         }
 
         // move rightwards
+        let original_x = player_transform.translation.x;
         if let Some(left_of_obstacle) = left_of_closest_wall {
             let distance_from_left_of_obstacle = left_of_obstacle - player_right_edge;
             if distance_from_left_of_obstacle > f32::EPSILON {
@@ -153,6 +160,9 @@ fn apply_movement(
             // no walls to worry about running into
             player_transform.translation.x += controller.speed * time.delta_seconds();
         }
+
+        total_distance.0 += player_transform.translation.x - original_x;
+        dbg!(total_distance.0); //TODO
 
         // find closest thing to run into when falling
         let mut top_of_closest_floor = None;
