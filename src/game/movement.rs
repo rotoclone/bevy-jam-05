@@ -98,10 +98,10 @@ fn apply_movement(
                 if let Some(other_left) = left_of_closest_wall {
                     let other_distance_from_left = other_left - player_right_edge;
                     if distance_from_left_side_of_obstacle < other_distance_from_left {
-                        left_of_closest_wall = Some(distance_from_left_side_of_obstacle);
+                        left_of_closest_wall = Some(obstacle_left_edge);
                     }
                 } else {
-                    left_of_closest_wall = Some(distance_from_left_side_of_obstacle);
+                    left_of_closest_wall = Some(obstacle_left_edge);
                 }
             }
         }
@@ -134,10 +134,10 @@ fn apply_movement(
                 if let Some(other_top) = top_of_closest_floor {
                     let other_distance_from_top = player_bottom - other_top;
                     if distance_from_top_of_obstacle < other_distance_from_top {
-                        top_of_closest_floor = Some(distance_from_top_of_obstacle);
+                        top_of_closest_floor = Some(obstacle_top);
                     }
                 } else {
-                    top_of_closest_floor = Some(distance_from_top_of_obstacle);
+                    top_of_closest_floor = Some(obstacle_top);
                 }
             }
         }

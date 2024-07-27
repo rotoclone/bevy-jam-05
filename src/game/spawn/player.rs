@@ -42,19 +42,19 @@ fn spawn_player(
     let layout = TextureAtlasLayout::from_grid(UVec2::splat(24), 7, 3, Some(UVec2::splat(0)), None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
-    let player_size = 24.0 * PLAYER_SCALE;
+    let player_size = Vec2::new(20.0 * PLAYER_SCALE, 24.0 * PLAYER_SCALE);
 
     commands.spawn((
         Name::new("Player"),
         Player {
-            collider: Vec2::new(player_size, player_size),
+            collider: player_size,
         },
         SpriteBundle {
             texture: image_handles.get(ImageKey::Player),
             transform: Transform::from_scale(Vec2::splat(PLAYER_SCALE).extend(1.0))
                 .with_translation(Vec3::new(
-                    (-FLOOR_WIDTH / 2.0) + (player_size / 2.0),
-                    FLOOR_Y + player_size,
+                    (-FLOOR_WIDTH / 2.0) + (player_size.x / 2.0),
+                    FLOOR_Y + player_size.y,
                     0.0,
                 )),
             ..Default::default()
