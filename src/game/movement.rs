@@ -162,7 +162,6 @@ fn apply_movement(
         }
 
         total_distance.0 += player_transform.translation.x - original_x;
-        dbg!(total_distance.0); //TODO
 
         // find closest thing to run into when falling
         let mut top_of_closest_floor = None;

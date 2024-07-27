@@ -2,9 +2,14 @@
 
 use bevy::prelude::*;
 
-use crate::game::{
-    assets::{HandleMap, ImageKey},
-    SHOW_COLLIDERS,
+use crate::{
+    game::{
+        assets::{FontKey, HandleMap, ImageKey},
+        movement::TotalDistance,
+        SHOW_COLLIDERS,
+    },
+    ui::palette::LABEL_TEXT,
+    AppSet,
 };
 
 use super::{player::SpawnPlayer, sequencer::SpawnSequencer};
@@ -32,18 +37,27 @@ const TOTAL_LEVELS: u32 = 6;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_level);
+    app.observe(spawn_distance_display);
     app.observe(spawn_obstacles);
     app.insert_resource(CurrentLevel(0));
+
+    app.add_systems(Update, update_distance_display.in_set(AppSet::Update));
 }
 
 #[derive(Event, Debug)]
 pub struct SpawnLevel;
 
 #[derive(Event, Debug)]
+pub struct SpawnDistanceDisplay;
+
+#[derive(Event, Debug)]
 pub struct SpawnObstacles(pub u32);
 
 #[derive(Resource, Debug)]
 pub struct CurrentLevel(pub u32);
+
+#[derive(Component)]
+pub struct DistanceDisplayText;
 
 #[derive(Component)]
 pub struct Obstacle;
@@ -67,6 +81,7 @@ fn spawn_level(
 ) {
     commands.trigger(SpawnPlayer);
     commands.trigger(SpawnSequencer);
+    commands.trigger(SpawnDistanceDisplay);
     commands.trigger(SpawnObstacles(current_level.0));
 
     commands.spawn((
@@ -116,6 +131,53 @@ fn spawn_level(
     ));
 
     commands.insert_resource(ClearColor(Color::srgb(0.35, 0.35, 0.35)));
+}
+
+fn spawn_distance_display(
+    _trigger: Trigger<SpawnDistanceDisplay>,
+    font_handles: Res<HandleMap<FontKey>>,
+    mut commands: Commands,
+) {
+    let mut entity = commands.spawn((
+        Name::new("Distance display"),
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Px(35.0),
+                top: Val::Px(5.0),
+                left: Val::Px(5.0),
+                position_type: PositionType::Absolute,
+                justify_content: JustifyContent::Start,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            ..default()
+        },
+    ));
+    entity.with_children(|children| {
+        children.spawn((
+            Name::new("Distance display text"),
+            DistanceDisplayText,
+            TextBundle::from_section(
+                "Distance: 0",
+                TextStyle {
+                    font: font_handles.get(FontKey::General),
+                    font_size: 30.0,
+                    color: LABEL_TEXT,
+                },
+            ),
+        ));
+    });
+}
+
+fn update_distance_display(
+    mut distance_display_text_query: Query<&mut Text, With<DistanceDisplayText>>,
+    total_distance: Res<TotalDistance>,
+) {
+    let distance_for_display = ((total_distance.0 / LEVEL_WIDTH) * 100.0).round() as u32;
+    for mut text in &mut distance_display_text_query {
+        text.sections[0].value = format!("Distance: {distance_for_display}");
+    }
 }
 
 fn spawn_obstacles(
