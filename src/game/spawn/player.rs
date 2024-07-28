@@ -73,7 +73,7 @@ fn spawn_player(
                 transform: Transform::from_scale(Vec2::splat(PLAYER_SCALE).extend(1.0))
                     .with_translation(Vec3::new(
                         (-LEVEL_WIDTH / 2.0) + (PLAYER_IMAGE_SIZE / 2.0),
-                        FLOOR_Y - collider_offset.y + (collider_size.y / 2.0),
+                        FLOOR_Y - collider_offset.y + (collider_size.y / 2.0) + 1.0,
                         0.0,
                     )),
                 ..Default::default()

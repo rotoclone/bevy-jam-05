@@ -33,7 +33,7 @@ const SPIKES_IMAGE_SIZE: f32 = SPIKES_RAW_IMAGE_SIZE * IMAGE_SCALE;
 const SPIKES_WIDTH: f32 = SPIKES_IMAGE_SIZE;
 const SPIKES_HEIGHT: f32 = 6.0 * IMAGE_SCALE;
 
-const TOTAL_LEVELS: u32 = 6;
+pub const TOTAL_LEVELS: u32 = 6;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_level);
@@ -174,9 +174,8 @@ fn update_distance_display(
     mut distance_display_text_query: Query<&mut Text, With<DistanceDisplayText>>,
     total_distance: Res<TotalDistance>,
 ) {
-    let distance_for_display = ((total_distance.0 / LEVEL_WIDTH) * 100.0).round() as u32;
     for mut text in &mut distance_display_text_query {
-        text.sections[0].value = format!("Distance: {distance_for_display}");
+        text.sections[0].value = format!("Distance: {}", *total_distance);
     }
 }
 

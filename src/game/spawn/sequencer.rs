@@ -68,6 +68,9 @@ pub struct SetBeatButtonsEnabled(pub bool);
 #[derive(Resource)]
 pub struct Dead(pub bool);
 
+#[derive(Component)]
+pub struct GameOver;
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct Sequencer;
@@ -189,6 +192,7 @@ fn reset_sequence(
     _: Trigger<ResetSequence>,
     mut sequence_state: ResMut<SequenceState>,
     mut button_query: Query<(&InteractionPalette, &mut BackgroundColor), With<BeatButton>>,
+    game_over_query: Query<Entity, With<GameOver>>,
     mut current_level: ResMut<CurrentLevel>,
     mut dead: ResMut<Dead>,
     mut distance: ResMut<TotalDistance>,
@@ -197,6 +201,10 @@ fn reset_sequence(
     sequence_state.beat = 0;
     sequence_state.beat_timer.pause();
     sequence_state.beat_timer.reset();
+
+    for entity in &game_over_query {
+        commands.entity(entity).despawn_recursive();
+    }
 
     for (palette, mut background_color) in button_query.iter_mut() {
         *background_color = BackgroundColor(palette.none);
@@ -488,10 +496,56 @@ fn spawn_sequencer_row(
         });
 }
 
-fn handle_death(_trigger: Trigger<DeathEvent>, mut dead: ResMut<Dead>, mut commands: Commands) {
+fn handle_death(
+    _trigger: Trigger<DeathEvent>,
+    mut dead: ResMut<Dead>,
+    font_handles: Res<HandleMap<FontKey>>,
+    distance: Res<TotalDistance>,
+    current_level: Res<CurrentLevel>,
+    mut commands: Commands,
+) {
     dead.0 = true;
     commands.trigger(PauseSequence);
     commands.trigger(SetBeatButtonsEnabled(false));
+
+    commands
+        .spawn((
+            Name::new("Game over Root"),
+            GameOver,
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(50.0),
+                    height: Val::Percent(50.0),
+                    left: Val::Percent(25.0),
+                    top: Val::Percent(25.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(10.0),
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.75)),
+                border_radius: BorderRadius::all(Val::Px(10.0)),
+                ..default()
+            },
+        ))
+        .with_children(|children| {
+            let judgement = match current_level.0 {
+                0 => "Pathetic.",
+                1..=3 => "You can do better.",
+                4..=5 => "Not bad!",
+                6..=7 => "Pretty good!",
+                _ => "I'm proud of you.",
+            };
+            children.header(
+                format!("You ran {} feet.\n{judgement}", *distance),
+                &font_handles,
+            );
+            children
+                .button("Try Again", &font_handles)
+                .insert(GameAction::Stop);
+        });
 }
 
 fn set_beat_buttons_enabled(

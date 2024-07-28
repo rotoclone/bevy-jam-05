@@ -20,10 +20,10 @@ const GRAVITY: f32 = 2300.0;
 const JUMP_VELOCITY: f32 = 800.0;
 
 /// Velocity added on float in pixels/sec
-const FLOAT_VELOCITY: f32 = 800.0;
+const FLOAT_VELOCITY: f32 = 1000.0;
 
 /// The maximum final velocity after a float in pixels/sec
-const FLOAT_LIMIT: f32 = -5.0;
+const FLOAT_LIMIT: f32 = -10.0;
 
 /// The velocity added on dive in pixels/sec
 const DIVE_VELOCITY: f32 = -800.0;
@@ -49,6 +49,12 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, Debug)]
 pub struct TotalDistance(pub f32);
+
+impl std::fmt::Display for TotalDistance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (((self.0 / LEVEL_WIDTH) * 50.0).round() as u32).fmt(f)
+    }
+}
 
 #[derive(Resource, Debug)]
 pub struct Paused(pub bool);
@@ -197,7 +203,9 @@ fn apply_movement(
             let obstacle_top =
                 transform.translation.y + collider.offset.y + (collider.bounds.y / 2.0);
 
-            if !(player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge) {
+            if !(player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge)
+                && obstacle_top <= player_bottom
+            {
                 // player is above obstacle
                 let distance_from_top_of_obstacle = player_bottom - obstacle_top;
                 if let Some(other_top) = top_of_closest_floor {
@@ -223,6 +231,7 @@ fn apply_movement(
                 let min_y = top_of_obstacle - player.collider_offset.y + (player.collider.y / 2.0);
                 player_transform.translation.y = proposed_y.max(min_y);
                 controller.vertical_velocity -= GRAVITY * time.delta_seconds();
+                controller.jumping = true;
             } else {
                 // player is on the obstacle
                 controller.vertical_velocity = 0.0;
@@ -239,8 +248,14 @@ fn apply_movement(
 fn check_spike_collisions(
     player_query: Query<(&Transform, &Player), Without<Spikes>>,
     spikes_query: Query<(&Transform, &RectCollider), With<Spikes>>,
+    paused: Res<Paused>,
+    dead: Res<Dead>,
     mut commands: Commands,
 ) {
+    if paused.0 || dead.0 {
+        return;
+    }
+
     for (player_transform, player) in &player_query {
         let player_left_edge =
             player_transform.translation.x + player.collider_offset.x - (player.collider.x / 2.0);

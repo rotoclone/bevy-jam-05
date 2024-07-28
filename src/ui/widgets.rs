@@ -134,13 +134,12 @@ impl<T: Spawn> Widgets for T {
             Name::new("Header"),
             NodeBundle {
                 style: Style {
-                    width: Px(500.0),
-                    height: Px(65.0),
+                    width: Auto,
+                    height: Auto,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                background_color: BackgroundColor(NODE_BACKGROUND),
                 ..default()
             },
         ));
@@ -151,10 +150,11 @@ impl<T: Spawn> Widgets for T {
                     text,
                     TextStyle {
                         font: font_handles.get(FontKey::General),
-                        font_size: 40.0,
+                        font_size: 55.0,
                         color: HEADER_TEXT,
                     },
-                ),
+                )
+                .with_text_justify(JustifyText::Center),
             ));
         });
         entity
