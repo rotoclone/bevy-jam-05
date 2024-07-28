@@ -5,7 +5,10 @@ use ui_palette::TITLE_TEXT;
 
 use super::Screen;
 use crate::{
-    game::assets::{FontKey, HandleMap},
+    game::{
+        assets::{FontKey, HandleMap, SoundtrackKey},
+        audio::soundtrack::PlaySoundtrack,
+    },
     ui::prelude::*,
 };
 
@@ -69,11 +72,14 @@ fn enter_title(mut commands: Commands, font_handles: Res<HandleMap<FontKey>>) {
                 .button("Exit", &font_handles)
                 .insert(TitleAction::Exit);
         });
+
+    commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Title));
 }
 
 fn handle_title_action(
     mut next_screen: ResMut<NextState<Screen>>,
     mut button_query: InteractionQuery<&TitleAction>,
+    mut commands: Commands,
     #[cfg(not(target_family = "wasm"))] mut app_exit: EventWriter<AppExit>,
 ) {
     for (interaction, action) in &mut button_query {
@@ -87,6 +93,8 @@ fn handle_title_action(
                     app_exit.send(AppExit::Success);
                 }
             }
+
+            commands.trigger(PlaySoundtrack::Disable);
         }
     }
 }

@@ -38,7 +38,13 @@ fn spawn_player(
     mut commands: Commands,
     image_handles: Res<HandleMap<ImageKey>>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    existing_player_query: Query<Entity, With<Player>>,
 ) {
+    // despawn any existing player(s)
+    for existing_player in &existing_player_query {
+        commands.entity(existing_player).despawn_recursive();
+    }
+
     // A texture atlas is a way to split one image with a grid into multiple sprites.
     // By attaching it to a [`SpriteBundle`] and providing an index, we can specify which section of the image we want to see.
     // We will use this to animate our player character. You can learn more about texture atlases in this example:
@@ -67,7 +73,7 @@ fn spawn_player(
                 transform: Transform::from_scale(Vec2::splat(PLAYER_SCALE).extend(1.0))
                     .with_translation(Vec3::new(
                         (-LEVEL_WIDTH / 2.0) + (PLAYER_IMAGE_SIZE / 2.0),
-                        FLOOR_Y + collider_size.y,
+                        FLOOR_Y - collider_offset.y + (collider_size.y / 2.0),
                         0.0,
                     )),
                 ..Default::default()

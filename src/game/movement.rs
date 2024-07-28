@@ -10,6 +10,7 @@ use crate::AppSet;
 use super::spawn::{
     level::{CurrentLevel, RectCollider, SpawnObstacles, Spikes, LEVEL_WIDTH},
     player::{Player, PLAYER_IMAGE_SIZE},
+    sequencer::{Dead, DeathEvent, PauseSequence, PlaySequence},
 };
 
 /// Gravity in pixels/sec^2
@@ -19,21 +20,24 @@ const GRAVITY: f32 = 2300.0;
 const JUMP_VELOCITY: f32 = 800.0;
 
 /// Velocity added on float in pixels/sec
-const FLOAT_VELOCITY: f32 = 600.0;
+const FLOAT_VELOCITY: f32 = 800.0;
 
 /// The maximum final velocity after a float in pixels/sec
-const FLOAT_LIMIT: f32 = -10.0;
+const FLOAT_LIMIT: f32 = -5.0;
 
 /// The velocity added on dive in pixels/sec
-const DIVE_VELOCITY: f32 = -600.0;
+const DIVE_VELOCITY: f32 = -800.0;
 
 /// The minimum final velocity after a dive in pixels/sec
-const DIVE_LIMIT: f32 = -600.0;
+const DIVE_LIMIT: f32 = -800.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(do_player_action);
+    app.observe(pause);
+    app.observe(resume);
 
     app.insert_resource(TotalDistance(0.0));
+    app.insert_resource(Paused(true));
 
     app.add_systems(
         Update,
@@ -45,6 +49,9 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, Debug)]
 pub struct TotalDistance(pub f32);
+
+#[derive(Resource, Debug)]
+pub struct Paused(pub bool);
 
 /// Event that makes the player do something
 #[derive(Event)]
@@ -84,6 +91,18 @@ fn do_player_action(
     }
 }
 
+fn pause(_trigger: Trigger<PauseSequence>, mut paused: ResMut<Paused>) {
+    paused.0 = true;
+}
+
+fn resume(_trigger: Trigger<PlaySequence>, mut paused: ResMut<Paused>, dead: Res<Dead>) {
+    if dead.0 {
+        return;
+    }
+
+    paused.0 = false;
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct MovementController {
@@ -106,8 +125,13 @@ fn apply_movement(
     time: Res<Time>,
     mut movement_query: Query<(&Player, &mut MovementController, &mut Transform)>,
     collider_query: Query<(&Transform, &RectCollider), Without<Player>>,
+    paused: Res<Paused>,
     mut total_distance: ResMut<TotalDistance>,
 ) {
+    if paused.0 {
+        return;
+    }
+
     for (player, mut controller, mut player_transform) in &mut movement_query {
         // why import a physics library when I can just implement a bad one myself
         let player_left_edge =
@@ -215,6 +239,7 @@ fn apply_movement(
 fn check_spike_collisions(
     player_query: Query<(&Transform, &Player), Without<Spikes>>,
     spikes_query: Query<(&Transform, &RectCollider), With<Spikes>>,
+    mut commands: Commands,
 ) {
     for (player_transform, player) in &player_query {
         let player_left_edge =
@@ -242,7 +267,7 @@ fn check_spike_collisions(
                 && !(player_bottom > spikes_top || player_top < spikes_bottom)
             {
                 // player is touching left side of spikes
-                panic!("aah u hit spikes from the left"); //TODO
+                commands.trigger(DeathEvent);
             }
 
             if (((player_bottom - spikes_top).abs() <= f32::EPSILON)
@@ -250,7 +275,7 @@ fn check_spike_collisions(
                 && !(player_left_edge > spikes_right_edge || player_right_edge < spikes_left_edge)
             {
                 // player is touching top or bottom of spikes
-                panic!("aah u hit spikes from the top or bottom"); //TODO
+                commands.trigger(DeathEvent);
             }
         }
     }

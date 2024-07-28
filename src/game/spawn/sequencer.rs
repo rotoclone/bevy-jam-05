@@ -8,11 +8,11 @@ use crate::{
     game::{
         assets::{FontKey, HandleMap, SfxKey},
         audio::sfx::PlaySfx,
-        movement::PlayerAction,
+        movement::{PlayerAction, TotalDistance},
     },
     screen::Screen,
     ui::{
-        interaction::{InteractionPalette, InteractionQuery},
+        interaction::{Enabled, InteractionPalette, InteractionQuery},
         palette::{
             ACTIVE_BEAT_BUTTON, HOVERED_ACTIVE_BEAT_BUTTON, HOVERED_INACTIVE_BEAT_BUTTON,
             INACTIVE_BEAT_BUTTON, PLAYING_ACTIVE_BEAT_BUTTON, PLAYING_INACTIVE_BEAT_BUTTON,
@@ -20,6 +20,11 @@ use crate::{
         widgets::Widgets,
     },
     AppSet,
+};
+
+use super::{
+    level::{CurrentLevel, SpawnObstacles},
+    player::SpawnPlayer,
 };
 
 pub const NUM_SYNTH_NOTES: usize = 8;
@@ -33,11 +38,14 @@ pub(super) fn plugin(app: &mut App) {
     app.observe(pause_sequence);
     app.observe(reset_sequence);
     app.observe(play_beat);
+    app.observe(handle_death);
+    app.observe(set_beat_buttons_enabled);
     app.register_type::<Sequencer>();
     app.register_type::<GameAction>();
     app.register_type::<SequencerAction>();
     app.insert_resource(Sequence::new());
     app.insert_resource(SequenceState::new());
+    app.insert_resource(Dead(false));
     app.add_systems(Update, handle_game_action.run_if(in_state(Screen::Playing)));
     app.add_systems(
         Update,
@@ -50,6 +58,15 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Event, Debug)]
 pub struct SpawnSequencer;
+
+#[derive(Event, Debug)]
+pub struct DeathEvent;
+
+#[derive(Event, Debug)]
+pub struct SetBeatButtonsEnabled(pub bool);
+
+#[derive(Resource)]
+pub struct Dead(pub bool);
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
@@ -137,22 +154,28 @@ impl SequenceState {
 
 /// Event that starts the sequence playing
 #[derive(Event)]
-struct PlaySequence;
+pub struct PlaySequence;
 
 fn play_sequence(
     _: Trigger<PlaySequence>,
     mut sequence_state: ResMut<SequenceState>,
+    dead: Res<Dead>,
     mut commands: Commands,
 ) {
+    if dead.0 {
+        return;
+    }
+
     if sequence_state.beat_timer.elapsed().is_zero() {
         commands.trigger(PlayBeat(0));
     }
     sequence_state.beat_timer.unpause();
+    commands.trigger(SetBeatButtonsEnabled(false));
 }
 
 /// Event that stops the sequence and without resetting it to the beginning
 #[derive(Event)]
-struct PauseSequence;
+pub struct PauseSequence;
 
 fn pause_sequence(_: Trigger<PauseSequence>, mut sequence_state: ResMut<SequenceState>) {
     sequence_state.beat_timer.pause();
@@ -166,6 +189,10 @@ fn reset_sequence(
     _: Trigger<ResetSequence>,
     mut sequence_state: ResMut<SequenceState>,
     mut button_query: Query<(&InteractionPalette, &mut BackgroundColor), With<BeatButton>>,
+    mut current_level: ResMut<CurrentLevel>,
+    mut dead: ResMut<Dead>,
+    mut distance: ResMut<TotalDistance>,
+    mut commands: Commands,
 ) {
     sequence_state.beat = 0;
     sequence_state.beat_timer.pause();
@@ -174,6 +201,13 @@ fn reset_sequence(
     for (palette, mut background_color) in button_query.iter_mut() {
         *background_color = BackgroundColor(palette.none);
     }
+
+    current_level.0 = 0;
+    dead.0 = false;
+    distance.0 = 0.0;
+    commands.trigger(SpawnPlayer);
+    commands.trigger(SpawnObstacles(0));
+    commands.trigger(SetBeatButtonsEnabled(true));
 }
 
 /// Event that plays all the active notes on a single beat
@@ -228,11 +262,16 @@ fn handle_sequencer_action(
         &SequencerAction,
         &mut InteractionPalette,
         &mut BeatButton,
+        &Enabled,
     )>,
     mut sequence: ResMut<Sequence>,
     mut commands: Commands,
 ) {
-    for (interaction, (action, mut palette, mut beat_button)) in &mut button_query {
+    for (interaction, (action, mut palette, mut beat_button, enabled)) in &mut button_query {
+        if !enabled.0 {
+            return;
+        }
+
         if matches!(interaction, Interaction::Pressed) {
             match action {
                 SequencerAction::ToggleBeat => {
@@ -443,7 +482,23 @@ fn spawn_sequencer_row(
                         beat: i,
                         active: false,
                     },
+                    Enabled(true),
                 ));
             }
         });
+}
+
+fn handle_death(_trigger: Trigger<DeathEvent>, mut dead: ResMut<Dead>, mut commands: Commands) {
+    dead.0 = true;
+    commands.trigger(PauseSequence);
+    commands.trigger(SetBeatButtonsEnabled(false));
+}
+
+fn set_beat_buttons_enabled(
+    trigger: Trigger<SetBeatButtonsEnabled>,
+    mut button_query: Query<&mut Enabled, With<BeatButton>>,
+) {
+    for mut enabled in &mut button_query {
+        enabled.0 = trigger.event().0;
+    }
 }

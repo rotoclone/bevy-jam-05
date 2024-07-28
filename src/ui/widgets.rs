@@ -2,7 +2,10 @@
 
 use bevy::{ecs::system::EntityCommands, prelude::*, ui::Val::*};
 
-use super::{interaction::InteractionPalette, palette::*};
+use super::{
+    interaction::{Enabled, InteractionPalette},
+    palette::*,
+};
 
 use crate::game::assets::{FontKey, HandleMap};
 
@@ -62,6 +65,7 @@ impl<T: Spawn> Widgets for T {
                 hovered: BUTTON_HOVERED_BACKGROUND,
                 pressed: BUTTON_PRESSED_BACKGROUND,
             },
+            Enabled(true),
         ));
         entity.with_children(|children| {
             children.spawn((
@@ -103,6 +107,7 @@ impl<T: Spawn> Widgets for T {
                 hovered: BUTTON_HOVERED_BACKGROUND,
                 pressed: BUTTON_PRESSED_BACKGROUND,
             },
+            Enabled(true),
         ));
         entity.with_children(|children| {
             children.spawn((

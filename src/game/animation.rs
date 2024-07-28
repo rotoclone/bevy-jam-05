@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use super::movement::MovementController;
+use super::movement::{MovementController, Paused};
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
@@ -40,7 +40,15 @@ fn update_animation_movement(mut player_query: Query<(&MovementController, &mut 
 }
 
 /// Update the animation timer.
-fn update_animation_timer(time: Res<Time>, mut query: Query<&mut PlayerAnimation>) {
+fn update_animation_timer(
+    time: Res<Time>,
+    mut query: Query<&mut PlayerAnimation>,
+    paused: Res<Paused>,
+) {
+    if paused.0 {
+        return;
+    }
+
     for mut animation in &mut query {
         animation.update_timer(time.delta());
     }

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::Screen;
 use crate::{
     game::{
-        assets::{FontKey, HandleMap, SoundtrackKey},
+        assets::{FontKey, HandleMap},
         audio::soundtrack::PlaySoundtrack,
     },
     ui::prelude::*,
@@ -36,13 +36,13 @@ fn enter_credits(mut commands: Commands, font_handles: Res<HandleMap<FontKey>>) 
             children.header("Tools Used", &font_handles);
             children.label("GIMP", &font_handles);
             children.label("Pixilart.com", &font_handles);
+            children.label("Bfxr", &font_handles);
+            children.label("Audacity", &font_handles);
 
             children
                 .button("Back", &font_handles)
                 .insert(CreditsAction::Back);
         });
-
-    commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Credits));
 }
 
 fn exit_credits(mut commands: Commands) {
