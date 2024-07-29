@@ -6,7 +6,7 @@ use ui_palette::TITLE_TEXT;
 use super::Screen;
 use crate::{
     game::{
-        assets::{FontKey, HandleMap},
+        assets::{FontKey, HandleMap, SoundtrackKey},
         audio::soundtrack::PlaySoundtrack,
     },
     ui::prelude::*,
@@ -70,7 +70,7 @@ fn enter_title(mut commands: Commands, font_handles: Res<HandleMap<FontKey>>) {
                 .insert(TitleAction::Exit);
         });
 
-    //TODO commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Title));
+    commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Title));
 }
 
 fn handle_title_action(
