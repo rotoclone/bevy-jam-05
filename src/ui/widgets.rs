@@ -92,7 +92,7 @@ impl<T: Spawn> Widgets for T {
             Name::new("Button"),
             ButtonBundle {
                 style: Style {
-                    width: Px(35.0),
+                    width: Px(70.0),
                     height: Px(35.0),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,

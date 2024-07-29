@@ -61,11 +61,8 @@ fn enter_title(mut commands: Commands, font_handles: Res<HandleMap<FontKey>>) {
                     ));
                 });
             children
-                .button("Play", &font_handles)
+                .button("Let's Jam", &font_handles)
                 .insert(TitleAction::Play);
-            children
-                .button("Credits", &font_handles)
-                .insert(TitleAction::Credits);
 
             #[cfg(not(target_family = "wasm"))]
             children

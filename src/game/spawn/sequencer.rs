@@ -309,6 +309,7 @@ fn spawn_controls(parent: &mut ChildBuilder, font_handles: &HandleMap<FontKey>) 
                 width: Val::Percent(100.0),
                 height: Val::Px(40.0),
                 top: Val::Px(0.0),
+                left: Val::Px(5.0),
                 justify_self: JustifySelf::Start,
                 justify_content: JustifyContent::Start,
                 align_items: AlignItems::Center,
@@ -323,17 +324,17 @@ fn spawn_controls(parent: &mut ChildBuilder, font_handles: &HandleMap<FontKey>) 
         .with_children(|children| {
             // play button
             children
-                .small_button(">", font_handles)
+                .small_button("Play", font_handles)
                 .insert(GameAction::Play);
 
             // pause button
             children
-                .small_button("||", font_handles)
+                .small_button("Pause", font_handles)
                 .insert(GameAction::Pause);
 
             // stop button
             children
-                .small_button("[]", font_handles)
+                .small_button("Stop", font_handles)
                 .insert(GameAction::Stop);
         });
 }
