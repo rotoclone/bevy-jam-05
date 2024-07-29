@@ -125,7 +125,7 @@ impl FromWorld for HandleMap<SoundtrackKey> {
         let asset_server = world.resource::<AssetServer>();
         [(
             SoundtrackKey::Title,
-            asset_server.load("audio/soundtracks/Monkeys Spinning Monkeys.ogg"), //TODO
+            asset_server.load("audio/sfx/kick1.ogg"), //TODO
         )]
         .into()
     }
