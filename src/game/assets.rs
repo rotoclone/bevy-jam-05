@@ -69,8 +69,6 @@ impl FromWorld for HandleMap<ImageKey> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Reflect)]
 pub enum SfxKey {
-    ButtonHover,
-    ButtonPress,
     Kick,
     Snare,
     HiHat,
@@ -85,14 +83,6 @@ impl FromWorld for HandleMap<SfxKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
         let mut map: HandleMap<SfxKey> = [
-            (
-                SfxKey::ButtonHover,
-                asset_server.load("audio/sfx/button_hover.ogg"),
-            ),
-            (
-                SfxKey::ButtonPress,
-                asset_server.load("audio/sfx/button_press.ogg"),
-            ),
             (SfxKey::Kick, asset_server.load("audio/sfx/kick1.ogg")),
             (SfxKey::Snare, asset_server.load("audio/sfx/snare1.ogg")),
             (SfxKey::HiHat, asset_server.load("audio/sfx/hihat1.ogg")),
