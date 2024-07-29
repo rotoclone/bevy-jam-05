@@ -38,6 +38,7 @@ fn play_soundtrack(
 /// Soundtracks will loop.
 #[derive(Event)]
 pub enum PlaySoundtrack {
+    #[allow(dead_code)] //TODO
     Key(SoundtrackKey),
     Disable,
 }

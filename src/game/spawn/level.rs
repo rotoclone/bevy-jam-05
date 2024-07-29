@@ -33,7 +33,9 @@ const SPIKES_IMAGE_SIZE: f32 = SPIKES_RAW_IMAGE_SIZE * IMAGE_SCALE;
 const SPIKES_WIDTH: f32 = SPIKES_IMAGE_SIZE;
 const SPIKES_HEIGHT: f32 = 6.0 * IMAGE_SCALE;
 
-pub const TOTAL_LEVELS: u32 = 6;
+const TOP_OF_FLOOR: f32 = FLOOR_Y + (FLOOR_HEIGHT / 2.0);
+
+pub const TOTAL_LEVELS: u32 = 4;
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_level);
@@ -194,23 +196,20 @@ fn spawn_obstacles(
         1 => spawn_level_1(&image_handles, &mut commands),
         2 => spawn_level_2(&image_handles, &mut commands),
         3 => spawn_level_3(&image_handles, &mut commands),
-        4 => spawn_level_4(&image_handles, &mut commands),
-        5 => spawn_level_5(&image_handles, &mut commands),
         _ => unreachable!(),
     }
 }
 
 fn spawn_level_0(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
-    let top_of_floor = FLOOR_Y + (FLOOR_HEIGHT / 2.0);
     spawn_box(
-        Vec2::new(0.0, top_of_floor + (BOX_SIZE / 2.0)),
+        Vec2::new(0.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
         commands,
     );
     spawn_floor_spikes(
         Vec2::new(
             (BOX_SIZE / 2.0) + (SPIKES_IMAGE_SIZE / 2.0),
-            top_of_floor + (SPIKES_IMAGE_SIZE / 2.0),
+            TOP_OF_FLOOR + (SPIKES_IMAGE_SIZE / 2.0),
         ),
         image_handles,
         commands,
@@ -218,46 +217,94 @@ fn spawn_level_0(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
 }
 
 fn spawn_level_1(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
-    let top_of_floor = FLOOR_Y + (FLOOR_HEIGHT / 2.0);
+    spawn_box_with_spikes_on_side(
+        Vec2::new(-BOX_SIZE, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
     spawn_floor_spikes(
         Vec2::new(
-            (-BOX_SIZE / 2.0) - (SPIKES_IMAGE_SIZE / 2.0),
-            top_of_floor + (SPIKES_IMAGE_SIZE / 2.0),
+            -BOX_SIZE,
+            TOP_OF_FLOOR + BOX_SIZE + (SPIKES_IMAGE_SIZE / 2.0),
         ),
         image_handles,
         commands,
     );
+}
+
+fn spawn_level_2(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
     spawn_box(
-        Vec2::new(0.0, top_of_floor + (BOX_SIZE / 2.0)),
+        Vec2::new(BOX_SIZE * -3.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
+
+    spawn_box_with_spikes_on_side(
+        Vec2::new(0.0, TOP_OF_FLOOR + (BOX_SIZE * 3.0)),
+        image_handles,
+        commands,
+    );
+
+    spawn_box(
+        Vec2::new(BOX_SIZE * 3.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
+        image_handles,
+        commands,
+    );
+}
+
+fn spawn_level_3(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    spawn_box(
+        Vec2::new(BOX_SIZE * -4.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
         commands,
     );
     spawn_box(
-        Vec2::new(0.0, top_of_floor + (BOX_SIZE / 2.0)),
+        Vec2::new(BOX_SIZE * -3.0, TOP_OF_FLOOR + BOX_SIZE + (BOX_SIZE / 2.0)),
         image_handles,
         commands,
     );
-    spawn_floor_spikes(
-        Vec2::new(0.0, top_of_floor + BOX_SIZE + (SPIKES_IMAGE_SIZE / 2.0)),
+    spawn_box(
+        Vec2::new(
+            BOX_SIZE * -2.0,
+            TOP_OF_FLOOR + (BOX_SIZE * 2.0) + (BOX_SIZE / 2.0),
+        ),
         image_handles,
         commands,
     );
-}
 
-fn spawn_level_2(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
-    todo!() //TODO
-}
+    spawn_box_with_spikes_on_side(
+        Vec2::new(
+            BOX_SIZE * 2.0,
+            TOP_OF_FLOOR + (BOX_SIZE * 5.0) + (BOX_SIZE / 2.0),
+        ),
+        image_handles,
+        commands,
+    );
 
-fn spawn_level_3(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
-    todo!() //TODO
-}
-
-fn spawn_level_4(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
-    todo!() //TODO
-}
-
-fn spawn_level_5(_image_handles: &HandleMap<ImageKey>, _commands: &mut Commands) {
-    todo!() //TODO
+    spawn_box_with_spikes_on_side(
+        Vec2::new(
+            BOX_SIZE * 2.0,
+            TOP_OF_FLOOR + (BOX_SIZE * 4.0) + (BOX_SIZE / 2.0),
+        ),
+        image_handles,
+        commands,
+    );
+    spawn_box_with_spikes_on_side(
+        Vec2::new(
+            BOX_SIZE * 2.0,
+            TOP_OF_FLOOR + (BOX_SIZE * 3.0) + (BOX_SIZE / 2.0),
+        ),
+        image_handles,
+        commands,
+    );
+    spawn_box_with_spikes_on_side(
+        Vec2::new(
+            BOX_SIZE * 2.0,
+            TOP_OF_FLOOR + (BOX_SIZE * 2.0) + (BOX_SIZE / 2.0),
+        ),
+        image_handles,
+        commands,
+    );
 }
 
 fn spawn_box(position: Vec2, image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
@@ -303,8 +350,11 @@ fn spawn_floor_spikes(
     commands: &mut Commands,
 ) {
     let collider = RectCollider {
-        bounds: Vec2::new(SPIKES_WIDTH, SPIKES_HEIGHT),
-        offset: Vec2::new(0.0, -6.0 * IMAGE_SCALE),
+        bounds: Vec2::new(
+            SPIKES_WIDTH - (4.0 * IMAGE_SCALE),
+            SPIKES_HEIGHT - IMAGE_SCALE,
+        ),
+        offset: Vec2::new(0.0, -7.0 * IMAGE_SCALE),
     };
     commands
         .spawn((
@@ -337,4 +387,64 @@ fn spawn_floor_spikes(
                 ));
             }
         });
+}
+
+fn spawn_wall_spikes(position: Vec2, image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    let collider = RectCollider {
+        bounds: Vec2::new(
+            SPIKES_HEIGHT - IMAGE_SCALE,
+            SPIKES_WIDTH - (4.0 * IMAGE_SCALE),
+        ),
+        offset: Vec2::new(7.0 * IMAGE_SCALE, 0.0),
+    };
+    commands
+        .spawn((
+            Name::new("Spikes"),
+            Obstacle,
+            Spikes,
+            SpriteBundle {
+                texture: image_handles.get(ImageKey::Spikes),
+                transform: Transform::from_scale(Vec2::splat(IMAGE_SCALE).extend(1.0))
+                    .with_translation(Vec3::new(position.x, position.y, 0.0))
+                    .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
+                ..Default::default()
+            },
+            collider.clone(),
+        ))
+        .with_children(|children| {
+            if SHOW_COLLIDERS {
+                children.spawn((
+                    Name::new("Spikes collider visualization"),
+                    SpriteBundle {
+                        sprite: Sprite {
+                            custom_size: Some(collider.bounds / IMAGE_SCALE),
+                            color: Color::srgba(0.0, 1.0, 0.0, 0.3),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(
+                            (Vec2::new(collider.offset.y, -collider.offset.x) / IMAGE_SCALE)
+                                .extend(1.0),
+                        )
+                        .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
+                        ..default()
+                    },
+                ));
+            }
+        });
+}
+
+fn spawn_box_with_spikes_on_side(
+    position: Vec2,
+    image_handles: &HandleMap<ImageKey>,
+    commands: &mut Commands,
+) {
+    spawn_box(position, image_handles, commands);
+    spawn_wall_spikes(
+        Vec2::new(
+            position.x - (BOX_SIZE / 2.0) - (SPIKES_IMAGE_SIZE / 2.0),
+            position.y,
+        ),
+        image_handles,
+        commands,
+    );
 }

@@ -58,8 +58,8 @@ fn spawn_player(
     );
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
-    let collider_size = Vec2::new(7.5 * PLAYER_SCALE, 22.0 * PLAYER_SCALE);
-    let collider_offset = Vec2::new(5.5 * PLAYER_SCALE, -1.0 * PLAYER_SCALE);
+    let collider_size = Vec2::new(7.5 * PLAYER_SCALE, 21.0 * PLAYER_SCALE);
+    let collider_offset = Vec2::new(5.5 * PLAYER_SCALE, -1.5 * PLAYER_SCALE);
 
     commands
         .spawn((

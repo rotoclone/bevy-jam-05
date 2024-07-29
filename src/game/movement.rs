@@ -193,8 +193,8 @@ fn apply_movement(
 
         total_distance.0 += player_transform.translation.x - original_x;
 
-        // find closest thing to run into when falling
-        let mut top_of_closest_floor = None;
+        // find closest thing to run into when falling or jumping
+        let mut closest_floor_or_ceiling = None;
         for (transform, collider) in &collider_query {
             let obstacle_left_edge =
                 transform.translation.x + collider.offset.x - (collider.bounds.x / 2.0);
@@ -202,43 +202,94 @@ fn apply_movement(
                 transform.translation.x + collider.offset.x + (collider.bounds.x / 2.0);
             let obstacle_top =
                 transform.translation.y + collider.offset.y + (collider.bounds.y / 2.0);
+            let obstacle_bottom =
+                transform.translation.y + collider.offset.y - (collider.bounds.y / 2.0);
 
-            if !(player_left_edge > obstacle_right_edge || player_right_edge < obstacle_left_edge)
-                && obstacle_top <= player_bottom
-            {
-                // player is above obstacle
-                let distance_from_top_of_obstacle = player_bottom - obstacle_top;
-                if let Some(other_top) = top_of_closest_floor {
-                    let other_distance_from_top = player_bottom - other_top;
-                    if distance_from_top_of_obstacle < other_distance_from_top {
-                        top_of_closest_floor = Some(obstacle_top);
+            if controller.vertical_velocity <= 0.0 {
+                // falling
+                if !(player_left_edge > obstacle_right_edge
+                    || player_right_edge < obstacle_left_edge)
+                    && obstacle_top <= player_bottom
+                {
+                    // player is above obstacle
+                    let distance_from_top_of_obstacle = player_bottom - obstacle_top;
+                    if let Some(other_top) = closest_floor_or_ceiling {
+                        let other_distance_from_top = player_bottom - other_top;
+                        if distance_from_top_of_obstacle < other_distance_from_top {
+                            closest_floor_or_ceiling = Some(obstacle_top);
+                        }
+                    } else {
+                        closest_floor_or_ceiling = Some(obstacle_top);
                     }
-                } else {
-                    top_of_closest_floor = Some(obstacle_top);
+                }
+            } else {
+                // jumping
+                if !(player_left_edge > obstacle_right_edge
+                    || player_right_edge < obstacle_left_edge)
+                    && obstacle_bottom >= player_top
+                {
+                    // player is below obstacle
+                    let distance_from_bottom_of_obstacle = obstacle_bottom - player_top;
+                    if let Some(other_bottom) = closest_floor_or_ceiling {
+                        let other_distance_from_bottom = other_bottom - player_top;
+                        if distance_from_bottom_of_obstacle < other_distance_from_bottom {
+                            closest_floor_or_ceiling = Some(obstacle_bottom);
+                        }
+                    } else {
+                        closest_floor_or_ceiling = Some(obstacle_bottom);
+                    }
                 }
             }
         }
 
-        // move downwards
-        if let Some(top_of_obstacle) = top_of_closest_floor {
-            let distance_from_top_of_obstacle = player_bottom - top_of_obstacle;
-            if distance_from_top_of_obstacle > f32::EPSILON
-                || controller.vertical_velocity > f32::EPSILON
-            {
-                // player is in the air, or should be in the air
-                let proposed_y = player_transform.translation.y
-                    + (controller.vertical_velocity * time.delta_seconds());
-                let min_y = top_of_obstacle - player.collider_offset.y + (player.collider.y / 2.0);
-                player_transform.translation.y = proposed_y.max(min_y);
-                controller.vertical_velocity -= GRAVITY * time.delta_seconds();
-                controller.jumping = true;
+        // move downwards or upwards
+        if let Some(closest_floor_or_ceiling) = closest_floor_or_ceiling {
+            if controller.vertical_velocity <= 0.0 {
+                // falling
+                let distance_from_top_of_obstacle = player_bottom - closest_floor_or_ceiling;
+                if distance_from_top_of_obstacle > f32::EPSILON {
+                    // player is in the air
+                    let proposed_y = player_transform.translation.y
+                        + (controller.vertical_velocity * time.delta_seconds());
+                    let min_y = closest_floor_or_ceiling - player.collider_offset.y
+                        + (player.collider.y / 2.0);
+                    player_transform.translation.y = proposed_y.max(min_y);
+                    if (player_transform.translation.y - min_y).abs() > f32::EPSILON {
+                        // player did not hit the obstacle
+                        controller.vertical_velocity -= GRAVITY * time.delta_seconds();
+                        controller.jumping = true;
+                    } else {
+                        // player hit the obstacle
+                        controller.vertical_velocity = 0.0;
+                        controller.jumping = false;
+                    }
+                }
             } else {
-                // player is on the obstacle
-                controller.vertical_velocity = 0.0;
-                controller.jumping = false;
+                // jumping
+                let distance_from_bottom_of_obstacle = closest_floor_or_ceiling - player_top;
+                if distance_from_bottom_of_obstacle > f32::EPSILON {
+                    // player has headroom
+                    let proposed_y = player_transform.translation.y
+                        + (controller.vertical_velocity * time.delta_seconds());
+                    let max_y = closest_floor_or_ceiling
+                        - player.collider_offset.y
+                        - (player.collider.y / 2.0);
+                    player_transform.translation.y = proposed_y.min(max_y);
+                    if (max_y - player_transform.translation.y).abs() > f32::EPSILON {
+                        // player did not hit the obstacle
+                        controller.vertical_velocity -= GRAVITY * time.delta_seconds();
+                    } else {
+                        // player hit the obstacle
+                        controller.vertical_velocity = 0.0;
+                    }
+                } else {
+                    // player is smackin their head on the obstacle
+                    controller.vertical_velocity -= GRAVITY * time.delta_seconds();
+                }
+                controller.jumping = true;
             }
         } else {
-            // freefall
+            // nothing to run into
             player_transform.translation.y += controller.vertical_velocity * time.delta_seconds();
             controller.vertical_velocity -= GRAVITY * time.delta_seconds();
         }
