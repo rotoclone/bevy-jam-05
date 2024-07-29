@@ -64,6 +64,9 @@ pub struct DistanceDisplayText;
 #[derive(Component)]
 pub struct Obstacle;
 
+#[derive(Component)]
+pub struct Background;
+
 #[derive(Component, Clone)]
 pub struct RectCollider {
     pub bounds: Vec2,
@@ -184,11 +187,16 @@ fn update_distance_display(
 fn spawn_obstacles(
     trigger: Trigger<SpawnObstacles>,
     existing_obstacles_query: Query<Entity, With<Obstacle>>,
+    background_query: Query<Entity, With<Background>>,
     image_handles: Res<HandleMap<ImageKey>>,
     mut commands: Commands,
 ) {
     for existing_obstacle in &existing_obstacles_query {
         commands.entity(existing_obstacle).despawn_recursive();
+    }
+
+    for background in &background_query {
+        commands.entity(background).despawn_recursive();
     }
 
     match trigger.event().0 % TOTAL_LEVELS {
@@ -201,6 +209,8 @@ fn spawn_obstacles(
 }
 
 fn spawn_level_0(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    spawn_background(Color::srgb(0.6, 0.4, 0.4), commands);
+
     spawn_box(
         Vec2::new(0.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
@@ -217,6 +227,8 @@ fn spawn_level_0(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
 }
 
 fn spawn_level_1(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    spawn_background(Color::srgb(0.4, 0.6, 0.4), commands);
+
     spawn_box_with_spikes_on_side(
         Vec2::new(-BOX_SIZE, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
@@ -233,6 +245,8 @@ fn spawn_level_1(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
 }
 
 fn spawn_level_2(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    spawn_background(Color::srgb(0.4, 0.4, 0.6), commands);
+
     spawn_box(
         Vec2::new(BOX_SIZE * -3.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
@@ -253,6 +267,8 @@ fn spawn_level_2(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
 }
 
 fn spawn_level_3(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
+    spawn_background(Color::srgb(0.6, 0.6, 0.4), commands);
+
     spawn_box(
         Vec2::new(BOX_SIZE * -4.0, TOP_OF_FLOOR + (BOX_SIZE / 2.0)),
         image_handles,
@@ -305,6 +321,22 @@ fn spawn_level_3(image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {
         image_handles,
         commands,
     );
+}
+
+fn spawn_background(color: Color, commands: &mut Commands) {
+    commands.spawn((
+        Name::new("Background"),
+        Background,
+        SpriteBundle {
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+            sprite: Sprite {
+                color,
+                custom_size: Some(Vec2::new(LEVEL_WIDTH, LEVEL_WIDTH)),
+                ..default()
+            },
+            ..default()
+        },
+    ));
 }
 
 fn spawn_box(position: Vec2, image_handles: &HandleMap<ImageKey>, commands: &mut Commands) {

@@ -241,9 +241,27 @@ fn play_beat(
     mut commands: Commands,
 ) {
     let beat = trigger.event().0;
+    let mut max_speed_change = None;
     for row in &sequence.0[beat] {
         commands.trigger(PlaySfx(row.to_sfx_key()));
+        let action = row.to_player_action();
+
+        if let PlayerAction::SetSpeed(speed) = action {
+            if let Some(PlayerAction::SetSpeed(max_speed)) = max_speed_change {
+                if speed > max_speed {
+                    max_speed_change = Some(action);
+                }
+            } else {
+                max_speed_change = Some(action);
+            }
+            continue;
+        }
+
         commands.trigger(row.to_player_action());
+    }
+
+    if let Some(speed_change) = max_speed_change {
+        commands.trigger(speed_change);
     }
 
     for (button, palette, mut background_color) in button_query.iter_mut() {
